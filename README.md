@@ -1,5 +1,7 @@
 # US Market Risk Dashboard
 
+**Live:** https://market-risk-dashboard.netlify.app · auto-deploys from `main`
+
 Single-page market risk dashboard: composite **Risk-On / Risk-Off** gauge built from
 the three major US indexes, VIX, BTC Fear & Greed, the full Treasury yield curve,
 and gold/silver. Auto-refreshes every 60 seconds.
