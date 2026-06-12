@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US Market Risk Dashboard</title>
+<style>
+  :root{
+    --bg:#0b0f17; --card:#121826; --card2:#0f1522; --border:#1f2937;
+    --txt:#e5e7eb; --muted:#8b95a7; --dim:#5b6575;
+    --green:#22c55e; --lime:#a3e635; --yellow:#eab308; --orange:#f97316; --red:#ef4444;
+    --blue:#3b82f6; --cyan:#22d3ee; --gold:#fbbf24; --silver:#cbd5e1;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 800px at 70% -10%,#13203a 0%,var(--bg) 55%);color:var(--txt);
+       font:14px/1.45 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;min-height:100vh}
+  header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+         padding:14px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;
+         background:rgba(11,15,23,.85);backdrop-filter:blur(8px);z-index:10}
+  .brand{font-size:18px;font-weight:700;letter-spacing:.3px}
+  .brand small{color:var(--muted);font-weight:400;margin-left:8px}
+  .hdr-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+  .pill{padding:3px 10px;border-radius:999px;border:1px solid var(--border);font-weight:600}
+  .pill.open{color:var(--green);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
+  .pill.closed{color:var(--muted)}
+  button{background:#1c2638;color:var(--txt);border:1px solid var(--border);border-radius:8px;
+         padding:6px 14px;font-size:13px;cursor:pointer}
+  button:hover{background:#243047}
+  button:disabled{opacity:.5;cursor:wait}
+  .toggle{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none}
+  main{max-width:1380px;margin:0 auto;padding:18px 22px 30px}
+  .card{background:linear-gradient(180deg,var(--card) 0%,var(--card2) 100%);border:1px solid var(--border);
+        border-radius:14px;padding:16px 18px;position:relative}
+  .card h3{margin:0 0 4px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;
+           display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--dim);display:inline-block;flex:none}
+  .dot.live{background:var(--green);box-shadow:0 0 6px rgba(34,197,94,.8)}
+  .dot.stale{background:var(--yellow)}
+  .dot.err{background:var(--red)}
+  /* hero */
+  .hero{display:flex;gap:28px;flex-wrap:wrap;align-items:center;margin-bottom:18px;padding:22px 26px}
+  .hero-gauge{flex:0 1 380px;min-width:300px;text-align:center}
+  .hero-side{flex:1 1 420px;min-width:300px}
+  .regime{display:inline-block;font-size:26px;font-weight:800;letter-spacing:1px;padding:8px 22px;border-radius:12px;margin-bottom:12px}
+  .regime.on{color:var(--green);background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.45)}
+  .regime.lean-on{color:var(--lime);background:rgba(163,230,53,.10);border:1px solid rgba(163,230,53,.4)}
+  .regime.neutral{color:var(--yellow);background:rgba(234,179,8,.10);border:1px solid rgba(234,179,8,.4)}
+  .regime.lean-off{color:var(--orange);background:rgba(249,115,22,.10);border:1px solid rgba(249,115,22,.4)}
+  .regime.off{color:var(--red);background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45)}
+  .sig-list{list-style:none;margin:0;padding:0}
+  .sig-list li{display:grid;grid-template-columns:170px 1fr 92px;gap:10px;align-items:center;padding:7px 0;
+               border-bottom:1px dashed rgba(31,41,55,.7);font-size:13px}
+  .sig-list li:last-child{border-bottom:0}
+  .sig-name{color:var(--txt)} .sig-name small{color:var(--dim);margin-left:5px}
+  .sig-bar{height:8px;border-radius:5px;background:#1b2435;overflow:hidden;position:relative}
+  .sig-bar i{display:block;height:100%;border-radius:5px;transition:width .8s ease}
+  .sig-tag{text-align:right;font-weight:700;font-size:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .span2{grid-column:span 2}
+  @media(max-width:760px){.span2{grid-column:span 1}}
+  /* chips & numbers */
+  .big{font-size:28px;font-weight:700;letter-spacing:.3px;font-variant-numeric:tabular-nums}
+  .chg{font-size:13.5px;font-weight:700;padding:2px 8px;border-radius:7px;font-variant-numeric:tabular-nums}
+  .up{color:var(--green);background:rgba(34,197,94,.1)}
+  .down{color:var(--red);background:rgba(239,68,68,.1)}
+  .flat{color:var(--muted)}
+  .chip{font-size:11px;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:999px;text-transform:uppercase}
+  .chip.on{color:#052e16;background:var(--green)} .chip.neu{color:#1c1400;background:var(--yellow)}
+  .chip.off{color:#fff;background:var(--red)} .chip.na{color:var(--muted);background:#1b2435}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .sub{color:var(--muted);font-size:12px}
+  .kv{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;color:var(--muted)}
+  .kv b{color:var(--txt);font-variant-numeric:tabular-nums}
+  .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid var(--border);color:var(--muted)}
+  .badge.good{color:var(--green);border-color:rgba(34,197,94,.4)}
+  .badge.warn{color:var(--orange);border-color:rgba(249,115,22,.4)}
+  .badge.bad{color:var(--red);border-color:rgba(239,68,68,.4)}
+  .rangebar{height:6px;border-radius:4px;background:linear-gradient(90deg,var(--red),var(--yellow),var(--green));position:relative;margin:8px 0 2px}
+  .rangebar i{position:absolute;top:-4px;width:3px;height:14px;background:#fff;border-radius:2px;box-shadow:0 0 4px #000;transition:left .6s ease}
+  .ratiobar{height:8px;border-radius:5px;background:linear-gradient(90deg,var(--green),var(--yellow) 55%,var(--red));position:relative;margin:8px 0 2px}
+  .ratiobar i{position:absolute;top:-4px;width:3px;height:16px;background:#fff;border-radius:2px;box-shadow:0 0 4px #000;transition:left .6s ease}
+  .needle{transition:transform .9s cubic-bezier(.34,1.4,.5,.95)}
+  .spark path.line{fill:none;stroke-width:1.8}
+  .spark path.fill{opacity:.12;stroke:none}
+  .metal{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed rgba(31,41,55,.7)}
+  .metal:last-of-type{border-bottom:0}
+  .gauge-wrap{display:flex;flex-direction:column;align-items:center}
+  table.tenors{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+  table.tenors td{padding:2px 4px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:center}
+  table.tenors td.v{color:var(--txt);font-weight:600}
+  footer{max-width:1380px;margin:6px auto 26px;padding:0 22px;color:var(--dim);font-size:11.5px;line-height:1.7}
+  footer a{color:var(--muted)}
+  .err-note{color:var(--red);font-size:12px;margin-top:6px;display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">📊 US Market Risk Dashboard <small>VIX · BTC F&amp;G · Yields · Metals · Indexes</small></div>
+  <div class="hdr-right">
+    <span id="mktStatus" class="pill closed">—</span>
+    <span>Updated: <b id="lastUpd" style="color:var(--txt)">—</b></span>
+    <span id="countdown"></span>
+    <label class="toggle"><input type="checkbox" id="autoRef" checked> Auto 60s</label>
+    <button id="btnRefresh">⟳ Refresh</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ HERO: composite risk gauge ============ -->
+  <section class="card hero">
+    <div class="hero-gauge">
+      <div id="gComposite"></div>
+      <div class="sub" style="margin-top:4px">Composite of equities, volatility, crypto sentiment, yield curve &amp; safe havens</div>
+    </div>
+    <div class="hero-side">
+      <div id="regimeBadge" class="regime neutral">LOADING…</div>
+      <ul class="sig-list" id="sigList"></ul>
+      <div class="err-note" id="heroErr"></div>
+    </div>
+  </section>
+
+  <!-- ============ GRID ============ -->
+  <section class="grid">
+
+    <div class="card" id="c-gspc">
+      <h3><span class="dot" data-dot="GSPC"></span>S&amp;P 500 <span class="chip na" data-chip="GSPC">—</span></h3>
+      <div class="row"><span class="big" data-px="GSPC">—</span><span class="chg flat" data-chg="GSPC">—</span><span class="sub" data-note="GSPC"></span></div>
+      <div class="spark" data-spark="GSPC"></div>
+      <div class="kv"><span>vs 50-day avg</span><b data-sma="GSPC">—</b></div>
+      <div class="kv"><span>52-week range</span><b data-rng="GSPC">—</b></div>
+      <div class="rangebar"><i data-rngbar="GSPC" style="left:50%"></i></div>
+    </div>
+
+    <div class="card" id="c-ixic">
+      <h3><span class="dot" data-dot="IXIC"></span>Nasdaq Composite <span class="chip na" data-chip="IXIC">—</span></h3>
+      <div class="row"><span class="big" data-px="IXIC">—</span><span class="chg flat" data-chg="IXIC">—</span><span class="sub" data-note="IXIC"></span></div>
+      <div class="spark" data-spark="IXIC"></div>
+      <div class="kv"><span>vs 50-day avg</span><b data-sma="IXIC">—</b></div>
+      <div class="kv"><span>52-week range</span><b data-rng="IXIC">—</b></div>
+      <div class="rangebar"><i data-rngbar="IXIC" style="left:50%"></i></div>
+    </div>
+
+    <div class="card" id="c-dji">
+      <h3><span class="dot" data-dot="DJI"></span>Dow Jones <span class="chip na" data-chip="DJI">—</span></h3>
+      <div class="row"><span class="big" data-px="DJI">—</span><span class="chg flat" data-chg="DJI">—</span><span class="sub" data-note="DJI"></span></div>
+      <div class="spark" data-spark="DJI"></div>
+      <div class="kv"><span>vs 50-day avg</span><b data-sma="DJI">—</b></div>
+      <div class="kv"><span>52-week range</span><b data-rng="DJI">—</b></div>
+      <div class="rangebar"><i data-rngbar="DJI" style="left:50%"></i></div>
+    </div>
+
+    <div class="card" id="c-vix">
+      <h3><span class="dot" data-dot="VIX"></span>VIX — Volatility <span class="chip na" data-chip="VIX">—</span></h3>
+      <div class="gauge-wrap"><div id="gVix"></div></div>
+      <div class="row" style="justify-content:center">
+        <span class="chg flat" data-chg="VIX">—</span>
+        <span class="badge" id="vixRegime">—</span>
+      </div>
+      <div class="spark" data-spark="VIX" style="text-align:center;margin-top:6px"></div>
+    </div>
+
+    <div class="card" id="c-btc">
+      <h3><span class="dot" data-dot="BTCFNG"></span>Bitcoin Fear &amp; Greed <span class="chip na" data-chip="BTC">—</span></h3>
+      <div class="gauge-wrap"><div id="gFng"></div></div>
+      <div class="kv"><span>BTC price (24h)</span><b><span data-px="BTC">—</span> <span class="chg flat" data-chg="BTC" style="font-size:12px">—</span></b></div>
+      <div class="kv"><span>Yesterday's reading</span><b id="fngPrev">—</b></div>
+    </div>
+
+    <div class="card" id="c-metals">
+      <h3><span class="dot" data-dot="METALS"></span>Gold &amp; Silver <span class="chip na" data-chip="METALS">—</span></h3>
+      <div class="metal">
+        <span style="color:var(--gold);font-weight:700">Gold</span>
+        <span class="spark" data-spark="GOLD"></span>
+        <span style="text-align:right"><b data-px="GOLD" style="font-variant-numeric:tabular-nums">—</b><br><span class="chg flat" data-chg="GOLD" style="font-size:11.5px">—</span></span>
+      </div>
+      <div class="metal">
+        <span style="color:var(--silver);font-weight:700">Silver</span>
+        <span class="spark" data-spark="SILVER"></span>
+        <span style="text-align:right"><b data-px="SILVER" style="font-variant-numeric:tabular-nums">—</b><br><span class="chg flat" data-chg="SILVER" style="font-size:11.5px">—</span></span>
+      </div>
+      <div class="sub" id="metalsNote"></div>
+      <div class="kv" style="margin-top:6px"><span>Gold / Silver ratio <span class="sub">(high = stress)</span></span><b id="gsRatio">—</b></div>
+      <div class="ratiobar"><i id="gsRatioBar" style="left:50%"></i></div>
+      <div class="kv sub"><span>60 · risk-on</span><span>85+ · risk-off</span></div>
+    </div>
+
+    <div class="card span2" id="c-yields">
+      <h3><span class="dot" data-dot="UST"></span>US Treasury Yield Curve <span class="chip na" data-chip="UST">—</span>
+          <span class="sub" id="curveDate" style="margin-left:auto;text-transform:none;letter-spacing:0">—</span></h3>
+      <div id="curveChart"></div>
+      <table class="tenors" id="tenorTable"></table>
+      <div class="row" style="margin-top:10px">
+        <span class="badge" id="b2s10">2s10s: —</span>
+        <span class="badge" id="b3m10">3m10y: —</span>
+        <span class="badge" id="b10live">10Y live: —</span>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<footer>
+  <b>Sources:</b> Indexes / VIX / Gold / Silver / 10Y intraday — Yahoo Finance chart API (15-min delayed, via public CORS proxy) ·
+  Yield curve — <a href="https://home.treasury.gov/resource-center/data-chart-center/interest-rates" target="_blank">US Treasury daily par yields</a> (official, direct) ·
+  BTC Fear &amp; Greed — <a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank">alternative.me</a> ·
+  BTC price — CoinGecko.<br>
+  Free sources are best-effort; if a tile shows a yellow dot it is serving cached data, red means the source failed this cycle.
+  Informational only — not financial advice.<br>
+  <span id="modeNote"></span>
+</footer>
+
+<script>
+"use strict";
+/* ================= utilities ================= */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const clamp = (v,a=0,b=100)=>Math.max(a,Math.min(b,v));
+const fmtN  = (v,d=2)=> v==null||isNaN(v) ? '—' : v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtPct= v => v==null||isNaN(v) ? '—' : (v>=0?'+':'')+v.toFixed(2)+'%';
+const fmtSign=(v,d=2)=> v==null||isNaN(v) ? '—' : (v>=0?'+':'')+v.toFixed(d);
+
+function setChg(el,v,suffix='%'){
+  if(!el) return;
+  el.textContent = v==null||isNaN(v) ? '—' : (v>=0?'+':'')+v.toFixed(2)+suffix;
+  el.className = 'chg '+(v>0.001?'up':v<-0.001?'down':'flat');
+}
+function setDot(name,state){ $$('[data-dot="'+name+'"]').forEach(d=>{ d.className='dot '+state; d.title={live:'Live',stale:'Cached / stale',err:'Source failed'}[state]||''; }); }
+function setChip(name,score){
+  const el=$('[data-chip="'+name+'"]'); if(!el) return;
+  if(score==null){ el.className='chip na'; el.textContent='—'; return; }
+  if(score>=60){ el.className='chip on'; el.textContent='Risk-On'; }
+  else if(score<=40){ el.className='chip off'; el.textContent='Risk-Off'; }
+  else{ el.className='chip neu'; el.textContent='Neutral'; }
+}
+const scoreColor = s => s>=65?'var(--green)':s>=55?'var(--lime)':s>=45?'var(--yellow)':s>=35?'var(--orange)':'var(--red)';
+
+/* ================= fetch layer ================= */
+const PROXIES = [
+  u => 'https://corsproxy.io/?url='+encodeURIComponent(u),
+  u => 'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+  u => 'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u),
+];
+let preferredProxy = +(localStorage.getItem('mkt.proxy')||0);
+
+async function getText(url,{proxy=false,timeout=12000}={}){
+  const attempts = proxy
+    ? [...PROXIES.keys()].sort((a,b)=>(a===preferredProxy?-1:b===preferredProxy?1:a-b)).map(i=>({i,u:PROXIES[i](url)}))
+    : [{i:-1,u:url}];
+  let lastErr;
+  for(const a of attempts){
+    try{
+      const res = await fetch(a.u,{signal:AbortSignal.timeout(timeout),cache:'no-store'});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const txt = await res.text();
+      if(!txt || txt.length<20) throw new Error('empty body');
+      if(a.i>=0){ preferredProxy=a.i; localStorage.setItem('mkt.proxy',a.i); }
+      return txt;
+    }catch(e){ lastErr=e; }
+  }
+  throw lastErr || new Error('fetch failed');
+}
+const getJSON = async (url,opt)=> JSON.parse(await getText(url,opt));
+
+/* ---- serverless mode: when deployed on Netlify, /api/* functions proxy the
+   sources server-side (no public CORS proxy needed) and unlock keyed fallbacks
+   (Finnhub ETF quotes, Twelve Data gold spot). Keys live in Netlify env vars. */
+let FN_MODE=false, FN_KEYS={finnhub:false,twelvedata:false};
+async function detectFunctions(){
+  try{
+    const r=await fetch('/api/health',{signal:AbortSignal.timeout(6000),cache:'no-store'});
+    if(r.ok){ const j=await r.json(); if(j&&j.ok){ FN_MODE=true; FN_KEYS={finnhub:!!j.finnhub,twelvedata:!!j.twelvedata}; } }
+  }catch(e){}
+  const m=$('#modeNote');
+  if(m) m.textContent=FN_MODE
+    ? '⚡ Serverless mode — data proxied via this site’s own Netlify Functions'
+      +(FN_KEYS.finnhub?' · Finnhub fallback armed':'')+(FN_KEYS.twelvedata?' · Twelve Data fallback armed':'')
+    : '🌐 Browser mode — using public CORS proxies (deploy to Netlify for the reliable path)';
+}
+async function yahooChart(sym){
+  if(FN_MODE){
+    try{ return JSON.parse(await getText(`/api/yahoo?symbol=${encodeURIComponent(sym)}&range=3mo&interval=1d`)); }
+    catch(e){ console.warn('function proxy failed for',sym,'— trying public proxies'); }
+  }
+  return getJSON(yfURL(sym),{proxy:true});
+}
+async function fhQuote(sym,note){           /* Finnhub real-time ETF quote */
+  const j=JSON.parse(await getText(`/api/finnhub?symbol=${encodeURIComponent(sym)}`));
+  if(!j||!j.c) throw new Error('no finnhub quote');
+  return {price:j.c,prev:j.pc,chgPct:j.dp,closes:[],sma50:null,hi52:null,lo52:null,note};
+}
+async function tdQuote(sym,note){           /* Twelve Data quote (gold spot) */
+  const j=JSON.parse(await getText(`/api/twelvedata?symbol=${encodeURIComponent(sym)}`));
+  if(j.status==='error'||j.close==null) throw new Error(j.message||'no td quote');
+  return {price:+j.close,prev:+j.previous_close,chgPct:+j.percent_change,closes:[],sma50:null,
+          hi52:j.fifty_two_week?+j.fifty_two_week.high:null,lo52:j.fifty_two_week?+j.fifty_two_week.low:null,note};
+}
+
+/* simple per-source cache so the page still paints when a source hiccups */
+const CKEY='mkt.cache.v1';
+const cache = (()=>{ try{return JSON.parse(localStorage.getItem(CKEY)||'{}');}catch(e){return {};} })();
+function cachePut(k,data){ cache[k]={t:Date.now(),data}; try{localStorage.setItem(CKEY,JSON.stringify(cache));}catch(e){} }
+function cacheGet(k,maxAgeMs=24*3600e3){ const e=cache[k]; return e && (Date.now()-e.t)<maxAgeMs ? e : null; }
+
+/* ================= data loaders ================= */
+const YAHOO_SYMS = {
+  GSPC:'^GSPC', IXIC:'^IXIC', DJI:'^DJI', VIX:'^VIX', GOLD:'GC=F', SILVER:'SI=F', TNX:'^TNX'
+};
+const yfURL = s=>`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=3mo&interval=1d`;
+
+function extractQuote(json){
+  const r=json?.chart?.result?.[0]; if(!r) throw new Error('bad chart payload');
+  const meta=r.meta||{}, ts=r.timestamp||[], cl=r.indicators?.quote?.[0]?.close||[];
+  const pts=[]; for(let i=0;i<ts.length;i++) if(cl[i]!=null) pts.push({t:ts[i],c:cl[i]});
+  const price = meta.regularMarketPrice ?? (pts.length?pts[pts.length-1].c:null);
+  let prev=null;
+  if(pts.length>=2){
+    const last=pts[pts.length-1];
+    const dayOf = t=> new Date(t*1000).toISOString().slice(0,10);
+    const sameDay = dayOf(last.t)===dayOf(meta.regularMarketTime||last.t);
+    const near = price!=null && Math.abs(last.c-price)/price<0.004;
+    prev = (sameDay||near) ? pts[pts.length-2].c : last.c;
+  }
+  const closes=pts.map(p=>p.c);
+  const smaSrc=closes.slice(-50);
+  return {
+    price, prev,
+    chgPct: (price!=null&&prev) ? (price-prev)/prev*100 : null,
+    closes,
+    sma50: smaSrc.length>=20 ? smaSrc.reduce((a,b)=>a+b,0)/smaSrc.length : null,
+    hi52: meta.fiftyTwoWeekHigh, lo52: meta.fiftyTwoWeekLow,
+  };
+}
+
+const KEYED_FALLBACKS={  /* [loader, args] tried when the Yahoo feed for that tile fails */
+  GOLD:  ()=> FN_KEYS.twelvedata ? tdQuote('XAU/USD','spot · Twelve Data') : FN_KEYS.finnhub ? fhQuote('GLD','via GLD ETF · Finnhub') : Promise.reject(),
+  GSPC:  ()=> FN_KEYS.finnhub ? fhQuote('SPY','via SPY ETF · Finnhub')  : Promise.reject(),
+  IXIC:  ()=> FN_KEYS.finnhub ? fhQuote('QQQ','via QQQ ETF · Finnhub')  : Promise.reject(),
+  DJI:   ()=> FN_KEYS.finnhub ? fhQuote('DIA','via DIA ETF · Finnhub')  : Promise.reject(),
+  SILVER:()=> FN_KEYS.finnhub ? fhQuote('SLV','via SLV ETF · Finnhub')  : Promise.reject(),
+};
+async function loadYahoo(){
+  const out={};
+  await Promise.allSettled(Object.entries(YAHOO_SYMS).map(async ([k,sym])=>{
+    out[k]=extractQuote(await yahooChart(sym));
+  }));
+  if(FN_MODE) await Promise.allSettled(Object.entries(KEYED_FALLBACKS).map(async ([k,fb])=>{
+    if(!out[k]) try{ out[k]=await fb(); }catch(e){}
+  }));
+  if(Object.keys(out).length===0) throw new Error('all yahoo symbols failed');
+  return out;
+}
+
+async function loadFng(){
+  const j=await getJSON('https://api.alternative.me/fng/?limit=2');
+  const d=j?.data; if(!d?.length) throw new Error('bad fng payload');
+  return { value:+d[0].value, label:d[0].value_classification,
+           prev:d[1]?+d[1].value:null, prevLabel:d[1]?.value_classification||'' };
+}
+
+async function loadBtc(){
+  const j=await getJSON('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
+  if(!j?.bitcoin) throw new Error('bad coingecko payload');
+  return { price:j.bitcoin.usd, chg24:j.bitcoin.usd_24h_change };
+}
+
+const TENORS=[['BC_1MONTH','1M'],['BC_2MONTH','2M'],['BC_3MONTH','3M'],['BC_4MONTH','4M'],['BC_6MONTH','6M'],
+  ['BC_1YEAR','1Y'],['BC_2YEAR','2Y'],['BC_3YEAR','3Y'],['BC_5YEAR','5Y'],['BC_7YEAR','7Y'],
+  ['BC_10YEAR','10Y'],['BC_20YEAR','20Y'],['BC_30YEAR','30Y']];
+
+function parseTreasuryXML(txt){
+  const doc=new DOMParser().parseFromString(txt,'text/xml');
+  const rows=[...doc.getElementsByTagNameNS('*','properties')].map(p=>{
+    const o={}; for(const el of p.children) o[el.localName]=el.textContent; return o;
+  }).filter(o=>o.NEW_DATE);
+  rows.sort((a,b)=>a.NEW_DATE.localeCompare(b.NEW_DATE));
+  return rows;
+}
+const tsyURL = ym=>`https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month=${ym}`;
+
+async function loadTreasury(){
+  const now=new Date();
+  const ym = d=> d.getFullYear()+String(d.getMonth()+1).padStart(2,'0');
+  let rows=parseTreasuryXML(await getText(tsyURL(ym(now)),{timeout:20000}));
+  if(rows.length<2){
+    const prevM=new Date(now.getFullYear(),now.getMonth()-1,15);
+    try{ rows=[...parseTreasuryXML(await getText(tsyURL(ym(prevM)),{timeout:20000})),...rows]; }catch(e){}
+  }
+  if(!rows.length) throw new Error('no treasury rows');
+  const toCurve=o=>TENORS.map(([k,lbl])=>({lbl,v:(o[k]!==undefined&&o[k]!=='')?parseFloat(o[k]):null})).filter(p=>p.v!=null&&!isNaN(p.v));
+  const latest=rows[rows.length-1], prior=rows.length>1?rows[rows.length-2]:null;
+  return { date:latest.NEW_DATE.slice(0,10), curve:toCurve(latest), prevCurve:prior?toCurve(prior):null,
+           prevDate:prior?prior.NEW_DATE.slice(0,10):null };
+}
+
+/* ================= SVG gauges & charts ================= */
+function makeGauge(el,{min,max,zones,size=240,fmt=v=>fmtN(v,1),sub=''}){
+  const W=size,H=size*0.62,cx=W/2,cy=H*0.88,R=W*0.36;
+  const ang=v=>180+clamp((v-min)/(max-min),0,1)*180;
+  const pt=(a,r)=>[cx+r*Math.cos(a*Math.PI/180),cy+r*Math.sin(a*Math.PI/180)];
+  let arcs='';
+  for(const [f,t,c] of zones){
+    const a1=ang(f),a2=ang(t),[x1,y1]=pt(a1,R),[x2,y2]=pt(a2,R);
+    arcs+=`<path d="M ${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2}" stroke="${c}" stroke-width="${W*0.07}" fill="none" stroke-linecap="butt" opacity=".9"/>`;
+  }
+  let ticks='';
+  const bounds=[...new Set(zones.flatMap(z=>[z[0],z[1]]))];
+  for(const b of bounds){
+    const a=ang(b),[x1,y1]=pt(a,R+W*0.045),[x2,y2]=pt(a,R+W*0.085);
+    ticks+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--dim)" stroke-width="1"/>
+            <text x="${pt(a,R+W*0.13)[0]}" y="${pt(a,R+W*0.13)[1]+3}" fill="var(--dim)" font-size="${W*0.04}" text-anchor="middle">${b}</text>`;
+  }
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H+18}" width="100%" style="max-width:${W}px">
+    ${arcs}${ticks}
+    <g class="needle" style="transform-origin:${cx}px ${cy}px">
+      <line x1="${cx}" y1="${cy}" x2="${cx-R+W*0.045}" y2="${cy}" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="${cx}" cy="${cy}" r="${W*0.025}" fill="#fff"/>
+    </g>
+    <text class="gval" x="${cx}" y="${cy-R*0.30}" fill="var(--txt)" font-size="${W*0.105}" font-weight="700" text-anchor="middle">—</text>
+    <text class="gsub" x="${cx}" y="${cy-R*0.30+W*0.055}" fill="var(--muted)" font-size="${W*0.045}" text-anchor="middle">${sub}</text>
+  </svg>`;
+  const needle=el.querySelector('.needle'), val=el.querySelector('.gval'), subEl=el.querySelector('.gsub');
+  needle.style.transform='rotate(0deg)';
+  return { set(v,subTxt){
+      if(v==null||isNaN(v)){ val.textContent='—'; return; }
+      needle.style.transform=`rotate(${clamp((v-min)/(max-min),0,1)*180}deg)`;
+      val.textContent=fmt(v);
+      if(subTxt!=null) subEl.textContent=subTxt;
+  }};
+}
+
+function sparkline(el,values,{w=150,h=38,color}={}){
+  if(!el||!values||values.length<2){ if(el) el.innerHTML=''; return; }
+  const min=Math.min(...values),max=Math.max(...values),span=(max-min)||1;
+  const X=i=>i/(values.length-1)*(w-4)+2, Y=v=>h-3-((v-min)/span)*(h-8);
+  const c=color||(values[values.length-1]>=values[0]?'var(--green)':'var(--red)');
+  let d=values.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+    <path class="fill" d="${d} L ${X(values.length-1)} ${h-1} L 2 ${h-1} Z" fill="${c}"/>
+    <path class="line" d="${d}" stroke="${c}"/></svg>`;
+}
+
+function drawCurve(el,curve,prevCurve,liveTen){
+  if(!curve?.length){ el.innerHTML='<div class="sub">No curve data</div>'; return; }
+  const W=640,H=235,L=42,Rm=16,T=14,B=30;
+  const all=[...curve.map(p=>p.v),...(prevCurve||[]).map(p=>p.v),...(liveTen!=null?[liveTen]:[])];
+  let yMin=Math.min(...all),yMax=Math.max(...all);
+  const pad=Math.max((yMax-yMin)*0.18,0.12); yMin-=pad; yMax+=pad;
+  const X=i=>L+i/(curve.length-1)*(W-L-Rm);
+  const Y=v=>T+(1-(v-yMin)/(yMax-yMin))*(H-T-B);
+  let grid='';
+  for(let g=0;g<=4;g++){
+    const v=yMin+(yMax-yMin)*g/4,y=Y(v);
+    grid+=`<line x1="${L}" y1="${y}" x2="${W-Rm}" y2="${y}" stroke="#1b2435" stroke-width="1"/>
+           <text x="${L-6}" y="${y+3.5}" fill="var(--dim)" font-size="10.5" text-anchor="end">${v.toFixed(2)}</text>`;
+  }
+  const path=pts=>pts.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ');
+  let prevSvg='';
+  if(prevCurve&&prevCurve.length===curve.length)
+    prevSvg=`<path d="${path(prevCurve)}" fill="none" stroke="var(--dim)" stroke-width="1.6" stroke-dasharray="5 4" opacity=".8"/>`;
+  const dots=curve.map((p,i)=>`<circle cx="${X(i)}" cy="${Y(p.v)}" r="3.4" fill="var(--cyan)"><title>${p.lbl}: ${p.v.toFixed(2)}%</title></circle>`).join('');
+  const labels=curve.map((p,i)=>`<text x="${X(i)}" y="${H-9}" fill="var(--muted)" font-size="10.5" text-anchor="middle">${p.lbl}</text>`).join('');
+  let liveDot='';
+  if(liveTen!=null){
+    const i10=curve.findIndex(p=>p.lbl==='10Y');
+    if(i10>=0) liveDot=`<circle cx="${X(i10)}" cy="${Y(liveTen)}" r="4.4" fill="none" stroke="var(--yellow)" stroke-width="2"><title>10Y intraday: ${liveTen.toFixed(2)}%</title></circle>`;
+  }
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">
+    ${grid}${prevSvg}
+    <path d="${path(curve)}" fill="none" stroke="var(--cyan)" stroke-width="2.4"/>
+    ${dots}${liveDot}${labels}
+    <g font-size="11">
+      <rect x="${W-178}" y="${T}" width="10" height="3" fill="var(--cyan)"/><text x="${W-164}" y="${T+5}" fill="var(--muted)">latest close</text>
+      <rect x="${W-178}" y="${T+14}" width="10" height="3" fill="var(--dim)"/><text x="${W-164}" y="${T+19}" fill="var(--muted)">prior session</text>
+      ${liveTen!=null?`<circle cx="${W-173}" cy="${T+30}" r="4" fill="none" stroke="var(--yellow)" stroke-width="2"/><text x="${W-164}" y="${T+33}" fill="var(--muted)">10Y intraday</text>`:''}
+    </g>
+  </svg>`;
+}
+
+/* ================= gauges ================= */
+const gComposite=makeGauge($('#gComposite'),{min:0,max:100,size:340,fmt:v=>Math.round(v),sub:'0 = risk-off · 100 = risk-on',
+  zones:[[0,35,'var(--red)'],[35,45,'var(--orange)'],[45,55,'var(--yellow)'],[55,65,'var(--lime)'],[65,100,'var(--green)']]});
+const gVix=makeGauge($('#gVix'),{min:10,max:45,size:230,fmt:v=>fmtN(v,2),sub:'spot VIX',
+  zones:[[10,15,'var(--green)'],[15,20,'var(--lime)'],[20,26,'var(--yellow)'],[26,32,'var(--orange)'],[32,45,'var(--red)']]});
+const gFng=makeGauge($('#gFng'),{min:0,max:100,size:230,fmt:v=>Math.round(v),sub:'…',
+  zones:[[0,25,'var(--red)'],[25,45,'var(--orange)'],[45,55,'var(--yellow)'],[55,75,'var(--lime)'],[75,100,'var(--green)']]});
+
+/* ================= scoring ================= */
+/* every component maps to 0-100: 0 = max risk-off, 100 = max risk-on */
+function buildScores(S){
+  const sc={};
+  if(S.yahoo){
+    const eq=['GSPC','IXIC','DJI'].map(k=>{
+      const q=S.yahoo[k]; if(!q?.price) return null;
+      const vsSma=q.sma50?(q.price-q.sma50)/q.sma50*100:0;
+      return clamp(50 + (q.chgPct||0)*12 + vsSma*6);
+    }).filter(v=>v!=null);
+    if(eq.length) sc.equity=eq.reduce((a,b)=>a+b,0)/eq.length;
+    const vix=S.yahoo.VIX?.price;
+    if(vix!=null) sc.vix=clamp((32-vix)/(32-12)*100);
+    const g=S.yahoo.GOLD,s=S.yahoo.SILVER;
+    if(g?.price&&s?.price){
+      const ratio=g.price/s.price;
+      const ratioScore=clamp((95-ratio)/(95-60)*100);
+      const flightScore=clamp(50-(g.chgPct||0)*14);
+      sc.haven=(ratioScore+flightScore)/2;
+      sc._gsRatio=ratio;
+    }
+  }
+  if(S.fng) sc.fng=clamp(S.fng.value);
+  if(S.treasury){
+    const f=l=>S.treasury.curve.find(p=>p.lbl===l)?.v;
+    const y2=f('2Y'),y10=f('10Y'),m3=f('3M');
+    if(y2!=null&&y10!=null){ sc.curve=clamp(50+(y10-y2)*40); sc._2s10=y10-y2; }
+    if(m3!=null&&y10!=null) sc._3m10=y10-m3;
+  }
+  const W={equity:.30,vix:.25,fng:.15,curve:.15,haven:.15};
+  let tot=0,wsum=0;
+  for(const k of Object.keys(W)) if(sc[k]!=null){ tot+=sc[k]*W[k]; wsum+=W[k]; }
+  sc.composite=wsum>0?tot/wsum:null;
+  return sc;
+}
+
+const SIG_DEFS=[
+  ['equity','Equities (3 indexes)','30%'],
+  ['vix','Volatility — VIX','25%'],
+  ['fng','BTC Fear & Greed','15%'],
+  ['curve','Yield curve 2s10s','15%'],
+  ['haven','Safe havens — gold','15%'],
+];
+function renderSignals(sc){
+  $('#sigList').innerHTML=SIG_DEFS.map(([k,name,w])=>{
+    const v=sc[k];
+    const tag = v==null?'<span class="sig-tag" style="color:var(--dim)">n/a</span>'
+      : `<span class="sig-tag" style="color:${scoreColor(v)}">${v>=60?'RISK-ON':v<=40?'RISK-OFF':'NEUTRAL'}</span>`;
+    const bar = v==null?'':`<i style="width:${v}%;background:${scoreColor(v)}"></i>`;
+    return `<li><span class="sig-name">${name}<small>${w}</small></span><span class="sig-bar">${bar}</span>${tag}</li>`;
+  }).join('');
+  const badge=$('#regimeBadge'), c=sc.composite;
+  if(c==null){ badge.className='regime neutral'; badge.textContent='NO DATA'; return; }
+  const lab = c>=65?['on','RISK ON 🟢']:c>=55?['lean-on','LEANING RISK-ON']:c>=45?['neutral','NEUTRAL / MIXED']
+            : c>=35?['lean-off','LEANING RISK-OFF']:['off','RISK OFF 🔴'];
+  badge.className='regime '+lab[0]; badge.textContent=lab[1];
+  gComposite.set(c);
+}
+
+/* ================= rendering ================= */
+const state={yahoo:null,fng:null,btc:null,treasury:null};
+
+function renderIndexes(){
+  for(const k of ['GSPC','IXIC','DJI']){
+    const q=state.yahoo?.[k]; if(!q) continue;
+    $('[data-px="'+k+'"]').textContent=fmtN(q.price,2);
+    setChg($('[data-chg="'+k+'"]'),q.chgPct);
+    sparkline($('[data-spark="'+k+'"]'),q.closes,{w:240,h:42});
+    $('[data-note="'+k+'"]').textContent=q.note||'';
+    const vs=q.sma50?(q.price-q.sma50)/q.sma50*100:null;
+    const smaEl=$('[data-sma="'+k+'"]');
+    smaEl.textContent=fmtPct(vs);
+    smaEl.style.color=vs==null?'var(--muted)':vs>=0?'var(--green)':'var(--red)';
+    if(q.hi52&&q.lo52){
+      $('[data-rng="'+k+'"]').textContent=fmtN(q.lo52,0)+' – '+fmtN(q.hi52,0);
+      $('[data-rngbar="'+k+'"]').style.left=clamp((q.price-q.lo52)/(q.hi52-q.lo52)*100,1,99)+'%';
+    }
+    const score=clamp(50+(q.chgPct||0)*12+(vs||0)*6);
+    setChip(k,score);
+  }
+}
+function renderVix(sc){
+  const q=state.yahoo?.VIX; if(!q) return;
+  gVix.set(q.price);
+  setChg($('[data-chg="VIX"]'),q.chgPct);
+  sparkline($('[data-spark="VIX"]'),q.closes,{w:200,h:34,color:'var(--orange)'});
+  const v=q.price, reg=$('#vixRegime');
+  const [cls,txt]= v<15?['good','Low vol — calm']:v<20?['good','Normal']:v<26?['warn','Elevated']:v<32?['warn','High — hedging demand']:['bad','Crisis mode'];
+  reg.className='badge '+cls; reg.textContent=txt;
+  setChip('VIX',sc.vix);
+}
+function renderBtc(sc){
+  if(state.fng){
+    gFng.set(state.fng.value,state.fng.label);
+    $('#fngPrev').textContent=state.fng.prev!=null?`${state.fng.prev} — ${state.fng.prevLabel}`:'—';
+  }
+  if(state.btc){
+    $('[data-px="BTC"]').textContent='$'+fmtN(state.btc.price,0);
+    setChg($('[data-chg="BTC"]'),state.btc.chg24);
+  }
+  setChip('BTC',sc.fng);
+}
+function renderMetals(sc){
+  const g=state.yahoo?.GOLD,s=state.yahoo?.SILVER;
+  if(g){ $('[data-px="GOLD"]').textContent='$'+fmtN(g.price,1); setChg($('[data-chg="GOLD"]'),g.chgPct); sparkline($('[data-spark="GOLD"]'),g.closes,{w:110,h:30,color:'var(--gold)'}); }
+  if(s){ $('[data-px="SILVER"]').textContent='$'+fmtN(s.price,2); setChg($('[data-chg="SILVER"]'),s.chgPct); sparkline($('[data-spark="SILVER"]'),s.closes,{w:110,h:30,color:'var(--silver)'}); }
+  $('#metalsNote').textContent=[g?.note?'Gold '+g.note:'',s?.note?'Silver '+s.note:''].filter(Boolean).join(' · ');
+  if(sc._gsRatio){
+    $('#gsRatio').textContent=fmtN(sc._gsRatio,1);
+    $('#gsRatioBar').style.left=clamp((sc._gsRatio-55)/(110-55)*100,1,99)+'%';
+  }
+  setChip('METALS',sc.haven);
+}
+function renderYields(sc){
+  const t=state.treasury; if(!t) return;
+  $('#curveDate').textContent='As of '+t.date+(t.prevDate?' (vs '+t.prevDate+')':'');
+  const live=state.yahoo?.TNX?.price!=null?(state.yahoo.TNX.price>=20?state.yahoo.TNX.price/10:state.yahoo.TNX.price):null;
+  drawCurve($('#curveChart'),t.curve,t.prevCurve,live);
+  const tbl=$('#tenorTable');
+  tbl.innerHTML='<tr>'+t.curve.map(p=>`<td>${p.lbl}</td>`).join('')+'</tr>'
+               +'<tr>'+t.curve.map(p=>{
+                  const pv=t.prevCurve?.find(q=>q.lbl===p.lbl)?.v;
+                  const d=pv!=null?p.v-pv:null;
+                  const col=d==null?'':d>0.001?'style="color:var(--red)"':d<-0.001?'style="color:var(--green)"':'';
+                  return `<td class="v" ${col} title="${d!=null?fmtSign(d*100,0)+' bp':''}">${p.v.toFixed(2)}</td>`;
+                 }).join('')+'</tr>';
+  const set=(id,v,inv)=>{ const el=$(id);
+    if(v==null){el.textContent=el.textContent.split(':')[0]+': —';return;}
+    el.textContent=el.textContent.split(':')[0]+': '+fmtSign(v,2)+'%'+(v<0?' ⚠ INVERTED':'');
+    el.className='badge '+(v<0?'bad':v<0.25?'warn':'good');
+  };
+  set('#b2s10',sc._2s10); set('#b3m10',sc._3m10);
+  const bl=$('#b10live'); bl.textContent='10Y live: '+(live!=null?live.toFixed(2)+'%':'—'); bl.className='badge';
+  setChip('UST',sc.curve);
+}
+
+function renderAll(){
+  const sc=buildScores(state);
+  renderSignals(sc);
+  renderIndexes(); renderVix(sc); renderBtc(sc); renderMetals(sc); renderYields(sc);
+  $('#lastUpd').textContent=new Date().toLocaleTimeString();
+}
+
+/* ================= refresh orchestration ================= */
+async function refreshSource(key,loader,dots){
+  try{
+    state[key]=await loader();
+    cachePut(key,state[key]);
+    dots.forEach(d=>setDot(d,'live'));
+  }catch(e){
+    const c=cacheGet(key);
+    if(c){ state[key]=c.data; dots.forEach(d=>setDot(d,'stale')); }
+    else dots.forEach(d=>setDot(d,'err'));
+    console.warn('source failed:',key,e.message||e);
+    return e;
+  }
+  return null;
+}
+
+let refreshing=false;
+async function refreshAll(){
+  if(refreshing) return; refreshing=true;
+  const btn=$('#btnRefresh'); btn.disabled=true; btn.textContent='⟳ Loading…';
+  const errs=(await Promise.all([
+    refreshSource('yahoo',loadYahoo,['GSPC','IXIC','DJI','VIX','METALS']),
+    refreshSource('fng',loadFng,['BTCFNG']),
+    refreshSource('btc',loadBtc,[]),
+    refreshSource('treasury',loadTreasury,['UST']),
+  ])).filter(Boolean);
+  /* yahoo partial failures: mark dots per symbol */
+  if(state.yahoo) for(const [k,dot] of [['GSPC','GSPC'],['IXIC','IXIC'],['DJI','DJI'],['VIX','VIX'],['GOLD','METALS']])
+    if(!state.yahoo[k]) setDot(dot,'err');
+  renderAll();
+  const he=$('#heroErr');
+  if(errs.length){ he.style.display='block'; he.textContent='⚠ '+errs.length+' source(s) unreachable this cycle — showing cached values where available. If on file://, try serving over http (e.g. python -m http.server).'; }
+  else he.style.display='none';
+  btn.disabled=false; btn.textContent='⟳ Refresh';
+  nextRefresh=Date.now()+REFRESH_MS;
+  refreshing=false;
+}
+
+/* ================= clock / market hours / timer ================= */
+const REFRESH_MS=60000;
+let nextRefresh=Date.now()+REFRESH_MS;
+
+function updateMarketStatus(){
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'numeric',minute:'numeric',hour12:false})
+    .formatToParts(new Date()).map(x=>[x.type,x.value]));
+  const mins=(+p.hour)*60+(+p.minute);
+  const wk=!['Sat','Sun'].includes(p.weekday);
+  const open=wk&&mins>=570&&mins<960;
+  const el=$('#mktStatus');
+  el.className='pill '+(open?'open':'closed');
+  el.textContent=(open?'● NYSE OPEN':'NYSE CLOSED')+' · '+p.hour.padStart(2,'0')+':'+p.minute.padStart(2,'0')+' ET';
+}
+setInterval(()=>{
+  updateMarketStatus();
+  const cd=$('#countdown');
+  if($('#autoRef').checked){
+    const s=Math.max(0,Math.ceil((nextRefresh-Date.now())/1000));
+    cd.textContent='next in '+s+'s';
+    if(s<=0&&!document.hidden) refreshAll();
+  } else cd.textContent='';
+},1000);
+
+$('#btnRefresh').addEventListener('click',refreshAll);
+document.addEventListener('visibilitychange',()=>{ if(!document.visibilitychange&&!document.hidden&&Date.now()>nextRefresh&&$('#autoRef').checked) refreshAll(); });
+
+updateMarketStatus();
+detectFunctions().then(refreshAll);
+</script>
+</body>
+</html>
