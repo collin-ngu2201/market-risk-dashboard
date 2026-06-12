@@ -1,0 +1,17 @@
+{
+  "name": "US Market Risk Dashboard",
+  "short_name": "Risk Dash",
+  "description": "Risk-on / risk-off market dashboard: VIX, BTC Fear & Greed, Treasury yield curve, gold & silver, S&P 500, Nasdaq, Dow.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0f17",
+  "theme_color": "#0b0f17",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
