@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.collin.riskdash",
+        "sha256_cert_fingerprints": ["C9:D2:52:01:97:B9:6A:CD:EA:A3:09:8A:B9:5B:7D:1D:56:C5:85:21:5E:30:F8:02:5A:CD:8F:4A:3E:D9:40:31"]
+      }
+    }]
