@@ -167,6 +167,17 @@
       <div class="spark" data-spark="VIX" style="text-align:center;margin-top:6px"></div>
     </div>
 
+    <div class="card" id="c-cnn">
+      <h3><span class="dot" data-dot="CNNFNG"></span>CNN Fear &amp; Greed
+          <span class="sub" style="text-transform:none;letter-spacing:0">· US stocks</span>
+          <span class="chip na" data-chip="CNN">—</span></h3>
+      <div class="gauge-wrap"><div id="gCnn"></div></div>
+      <div class="row" style="justify-content:center"><span class="badge" id="cnnRating">—</span></div>
+      <div class="spark" data-spark="CNN" style="text-align:center;margin-top:6px"></div>
+      <div class="kv"><span>Previous close</span><b id="cnnPrevClose">—</b></div>
+      <div class="kv"><span>Week / month ago</span><b id="cnnPrevWM">—</b></div>
+    </div>
+
     <div class="card" id="c-btc">
       <h3><span class="dot" data-dot="BTCFNG"></span>Bitcoin Fear &amp; Greed <span class="chip na" data-chip="BTC">—</span></h3>
       <div class="gauge-wrap"><div id="gFng"></div></div>
@@ -210,6 +221,7 @@
 <footer>
   <b>Sources:</b> Indexes / VIX / Gold / Silver / 10Y intraday — Yahoo Finance chart API (15-min delayed, via public CORS proxy) ·
   Yield curve — <a href="https://home.treasury.gov/resource-center/data-chart-center/interest-rates" target="_blank">US Treasury daily par yields</a> (official, direct) ·
+  CNN Fear &amp; Greed — <a href="https://edition.cnn.com/markets/fear-and-greed" target="_blank">CNN Business</a> (via serverless proxy) ·
   BTC Fear &amp; Greed — <a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank">alternative.me</a> ·
   BTC price — CoinGecko.<br>
   Free sources are best-effort; if a tile shows a yellow dot it is serving cached data, red means the source failed this cycle.
@@ -358,6 +370,22 @@ async function loadYahoo(){
   return out;
 }
 
+async function loadCnn(){
+  /* CNN's dataviz endpoint rejects non-browser callers, so production uses the
+     /api/cnn-fng function (sends browser headers server-side). In plain browser
+     mode we attempt a CORS proxy, which often fails CNN's referer check. */
+  const txt = FN_MODE
+    ? await getText('/api/cnn-fng')
+    : await getText('https://production.dataviz.cnn.io/index/fearandgreed/graphdata',{proxy:true});
+  const j=JSON.parse(txt), fg=j?.fear_and_greed;
+  if(!fg||fg.score==null) throw new Error('bad cnn payload');
+  const hist=(j.fear_and_greed_historical?.data||[]).map(d=>d.y).filter(v=>v!=null);
+  return { value:Math.round(fg.score), rating:fg.rating,
+           prevClose:fg.previous_close, prevWeek:fg.previous_1_week,
+           prevMonth:fg.previous_1_month, prevYear:fg.previous_1_year,
+           hist:hist.slice(-60) };
+}
+
 async function loadFng(){
   const j=await getJSON('https://api.alternative.me/fng/?limit=2');
   const d=j?.data; if(!d?.length) throw new Error('bad fng payload');
@@ -491,6 +519,8 @@ const gVix=makeGauge($('#gVix'),{min:10,max:45,size:230,fmt:v=>fmtN(v,2),sub:'sp
   zones:[[10,15,'var(--green)'],[15,20,'var(--lime)'],[20,26,'var(--yellow)'],[26,32,'var(--orange)'],[32,45,'var(--red)']]});
 const gFng=makeGauge($('#gFng'),{min:0,max:100,size:230,fmt:v=>Math.round(v),sub:'…',
   zones:[[0,25,'var(--red)'],[25,45,'var(--orange)'],[45,55,'var(--yellow)'],[55,75,'var(--lime)'],[75,100,'var(--green)']]});
+const gCnn=makeGauge($('#gCnn'),{min:0,max:100,size:230,fmt:v=>Math.round(v),sub:'…',
+  zones:[[0,25,'var(--red)'],[25,45,'var(--orange)'],[45,55,'var(--yellow)'],[55,75,'var(--lime)'],[75,100,'var(--green)']]});
 
 /* ================= scoring ================= */
 /* every component maps to 0-100: 0 = max risk-off, 100 = max risk-on */
@@ -514,6 +544,7 @@ function buildScores(S){
       sc._gsRatio=ratio;
     }
   }
+  if(S.cnn) sc.cnn=clamp(S.cnn.value);   /* CNN F&G already 0=fear … 100=greed */
   if(S.fng) sc.fng=clamp(S.fng.value);
   if(S.treasury){
     const f=l=>S.treasury.curve.find(p=>p.lbl===l)?.v;
@@ -521,7 +552,7 @@ function buildScores(S){
     if(y2!=null&&y10!=null){ sc.curve=clamp(50+(y10-y2)*40); sc._2s10=y10-y2; }
     if(m3!=null&&y10!=null) sc._3m10=y10-m3;
   }
-  const W={equity:.30,vix:.25,fng:.15,curve:.15,haven:.15};
+  const W={equity:.25,vix:.20,cnn:.20,fng:.10,curve:.15,haven:.10};
   let tot=0,wsum=0;
   for(const k of Object.keys(W)) if(sc[k]!=null){ tot+=sc[k]*W[k]; wsum+=W[k]; }
   sc.composite=wsum>0?tot/wsum:null;
@@ -529,11 +560,12 @@ function buildScores(S){
 }
 
 const SIG_DEFS=[
-  ['equity','Equities (3 indexes)','30%'],
-  ['vix','Volatility — VIX','25%'],
-  ['fng','BTC Fear & Greed','15%'],
+  ['equity','Equities (3 indexes)','25%'],
+  ['vix','Volatility — VIX','20%'],
+  ['cnn','CNN Fear & Greed','20%'],
+  ['fng','BTC Fear & Greed','10%'],
   ['curve','Yield curve 2s10s','15%'],
-  ['haven','Safe havens — gold','15%'],
+  ['haven','Safe havens — gold','10%'],
 ];
 function renderSignals(sc){
   $('#sigList').innerHTML=SIG_DEFS.map(([k,name,w])=>{
@@ -552,7 +584,7 @@ function renderSignals(sc){
 }
 
 /* ================= rendering ================= */
-const state={yahoo:null,fng:null,btc:null,treasury:null};
+const state={yahoo:null,cnn:null,fng:null,btc:null,treasury:null};
 
 function renderIndexes(){
   for(const k of ['GSPC','IXIC','DJI']){
@@ -582,6 +614,19 @@ function renderVix(sc){
   const [cls,txt]= v<15?['good','Low vol — calm']:v<20?['good','Normal']:v<26?['warn','Elevated']:v<32?['warn','High — hedging demand']:['bad','Crisis mode'];
   reg.className='badge '+cls; reg.textContent=txt;
   setChip('VIX',sc.vix);
+}
+function renderCnn(sc){
+  if(state.cnn){
+    const v=state.cnn.value;
+    gCnn.set(v,(state.cnn.rating||'').replace(/\b\w/g,c=>c.toUpperCase()));
+    const r=$('#cnnRating');
+    const [cls,txt]= v<25?['bad','Extreme Fear']:v<45?['warn','Fear']:v<55?['warn','Neutral']:v<75?['good','Greed']:['good','Extreme Greed'];
+    r.className='badge '+cls; r.textContent=txt;
+    sparkline($('[data-spark="CNN"]'),state.cnn.hist,{w:200,h:34,color:scoreColor(v)});
+    $('#cnnPrevClose').textContent=state.cnn.prevClose!=null?Math.round(state.cnn.prevClose):'—';
+    $('#cnnPrevWM').textContent=(state.cnn.prevWeek!=null?Math.round(state.cnn.prevWeek):'—')+' / '+(state.cnn.prevMonth!=null?Math.round(state.cnn.prevMonth):'—');
+  }
+  setChip('CNN',sc.cnn);
 }
 function renderBtc(sc){
   if(state.fng){
@@ -631,7 +676,7 @@ function renderYields(sc){
 function renderAll(){
   const sc=buildScores(state);
   renderSignals(sc);
-  renderIndexes(); renderVix(sc); renderBtc(sc); renderMetals(sc); renderYields(sc);
+  renderIndexes(); renderVix(sc); renderCnn(sc); renderBtc(sc); renderMetals(sc); renderYields(sc);
   $('#lastUpd').textContent=new Date().toLocaleTimeString();
 }
 
@@ -657,6 +702,7 @@ async function refreshAll(){
   const btn=$('#btnRefresh'); btn.disabled=true; btn.textContent='⟳ Loading…';
   const errs=(await Promise.all([
     refreshSource('yahoo',loadYahoo,['GSPC','IXIC','DJI','VIX','METALS']),
+    refreshSource('cnn',loadCnn,['CNNFNG']),
     refreshSource('fng',loadFng,['BTCFNG']),
     refreshSource('btc',loadBtc,[]),
     refreshSource('treasury',loadTreasury,['UST']),
