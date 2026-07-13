@@ -362,7 +362,7 @@ async function refreshAll(){
   if(dot)dot.className='dot '+(mode==='live'?'live':mode==='stale'?'stale':'err');
   const en=$('#errNote');
   if(en){
-    if(mode==='err'){en.style.display='block';en.textContent='⚠ Data sources unreachable this cycle and no cache available yet. Deployed on Netlify this uses the site’s own /api/bdt function; as a local file it falls back to public CORS proxies.';}
+    if(mode==='err'){en.style.display='block';en.textContent='⚠ Data sources unreachable this cycle and no cache available yet. Deployed (Vercel/Netlify) this uses the site’s own /api/bdt function; as a local file it falls back to public CORS proxies.';}
     else if(ok<UNIVERSE.length&&mode==='live'){en.style.display='block';en.textContent=`⚠ ${UNIVERSE.length-ok} of ${UNIVERSE.length} tickers failed to load this cycle.`;}
     else en.style.display='none';
   }

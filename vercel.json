@@ -1,0 +1,16 @@
+{
+  "headers": [
+    {
+      "source": "/riskdash.apk",
+      "headers": [
+        { "key": "Content-Type", "value": "application/vnd.android.package-archive" }
+      ]
+    },
+    {
+      "source": "/.well-known/assetlinks.json",
+      "headers": [
+        { "key": "Content-Type", "value": "application/json" }
+      ]
+    }
+  ]
+}

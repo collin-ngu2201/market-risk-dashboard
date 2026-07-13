@@ -36,7 +36,17 @@ blending depth, RSI(14) and 5-day pullback.
 - Phase 2 (planned): scheduled scanner + Netlify Blobs for fired signals with
   entry/target/stop tracking, alerts feed, earned T1–T5 tiers and win-rate stats.
 
-## Deploy (Netlify + GitHub)
+## Deploy (Vercel + GitHub)
+
+The `api/` directory holds the canonical serverless functions (Vercel Web-handler
+signature, file-based routing: `api/bdt.mjs` → `/api/bdt`). Import the repo at
+vercel.com/new (framework preset: Other, no build command) or deploy via CLI with
+`vercel --prod`. Set `FINNHUB_KEY` and `TWELVEDATA_KEY` in the project's
+Environment Variables to arm the keyed fallbacks — everything else works without keys.
+
+## Deploy (Netlify + GitHub) — legacy
+
+`netlify/functions/` mirrors the same functions for the original Netlify setup.
 
 1. Push this repo to GitHub.
 2. In Netlify: **Add new site → Import an existing project → GitHub** → pick this repo.
