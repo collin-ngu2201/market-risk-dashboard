@@ -1,6 +1,6 @@
 // Vercel serverless function (Web handler). Canonical copy going forward;
 // netlify/functions/ holds the legacy Netlify twin.
-export default async () =>
+export const GET = async () =>
   Response.json(
     {
       ok: true,

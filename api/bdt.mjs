@@ -56,7 +56,7 @@ async function fetchOne(symbol, range, interval) {
   };
 }
 
-export default async (req) => {
+export const GET = async (req) => {
   const u = new URL(req.url, "http://localhost");
   const symbols = (u.searchParams.get("symbols") || "")
     .split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);

@@ -4,7 +4,7 @@
 // Key stays server-side in the FINNHUB_KEY environment variable.
 const ALLOWED = new Set(["SPY", "QQQ", "DIA", "GLD", "SLV"]);
 
-export default async (req) => {
+export const GET = async (req) => {
   const key = process.env.FINNHUB_KEY;
   if (!key) return Response.json({ error: "FINNHUB_KEY not configured" }, { status: 503 });
   const symbol = new URL(req.url, "http://localhost").searchParams.get("symbol") || "";

@@ -5,7 +5,7 @@
 // 60s cache keeps usage well inside the 800-credits/day free quota.
 const ALLOWED = new Set(["XAU/USD"]);
 
-export default async (req) => {
+export const GET = async (req) => {
   const key = process.env.TWELVEDATA_KEY;
   if (!key) return Response.json({ error: "TWELVEDATA_KEY not configured" }, { status: 503 });
   const symbol = new URL(req.url, "http://localhost").searchParams.get("symbol") || "";

@@ -3,7 +3,7 @@
 // CNN Fear & Greed Index (stock-market sentiment). CNN's dataviz endpoint
 // rejects non-browser requests ("I'm a teapot"), so we spoof browser headers
 // server-side. No API key required.
-export default async () => {
+export const GET = async () => {
   const upstream =
     "https://production.dataviz.cnn.io/index/fearandgreed/graphdata";
   const r = await fetch(upstream, {

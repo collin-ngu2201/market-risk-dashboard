@@ -11,7 +11,7 @@ const ALLOWED = new Set([
 const RANGES = new Set(["1d", "5d", "1mo", "3mo", "6mo", "1y"]);
 const INTERVALS = new Set(["5m", "15m", "1h", "1d", "1wk"]);
 
-export default async (req) => {
+export const GET = async (req) => {
   const u = new URL(req.url, "http://localhost");
   const symbol = u.searchParams.get("symbol") || "";
   if (!ALLOWED.has(symbol))
