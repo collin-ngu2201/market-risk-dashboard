@@ -8,7 +8,7 @@ const ALLOWED = new Set(["XAU/USD"]);
 export default async (req) => {
   const key = process.env.TWELVEDATA_KEY;
   if (!key) return Response.json({ error: "TWELVEDATA_KEY not configured" }, { status: 503 });
-  const symbol = new URL(req.url).searchParams.get("symbol") || "";
+  const symbol = new URL(req.url, "http://localhost").searchParams.get("symbol") || "";
   if (!ALLOWED.has(symbol))
     return Response.json({ error: "symbol not allowed" }, { status: 400 });
 
