@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#050810">
+<title>Dip Radar — Watchlist</title>
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
+<link rel="stylesheet" href="bdt.css">
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="layout">
+
+  <aside class="side">
+    <div class="logo">Dip<br>Radar <small>SNAPBACK SCANNER</small></div>
+    <nav class="nav">
+      <a href="index.html">▦ Dashboard</a>
+      <a href="watchlist.html" class="active">≡ Watchlist</a>
+      <span class="soon">◎ Setups <span class="tag">SOON</span></span>
+      <span class="soon">✧ Alerts <span class="tag">SOON</span></span>
+      <span class="soon">∿ Performance <span class="tag">SOON</span></span>
+    </nav>
+    <div class="spacer"></div>
+    <div class="sysbox">
+      SYS.STATUS: <b id="sysMkt" class="ok">—</b><br>
+      LAST_SCAN: <b id="sysLast">—</b> <span id="scanDot" class="dot"></span><br>
+      NEXT_SCAN: <b id="sysNext">—</b><br>
+      QUOTES: ~15 MIN DELAYED
+    </div>
+    <div class="backlink"><a href="/">← US Market Risk Dashboard</a></div>
+  </aside>
+
+  <main class="main">
+    <div class="pagehead">
+      <div class="crumb">Dip Radar</div>
+      <h1>Watchlist</h1>
+      <div class="sub" id="wlCount">—</div>
+      <div class="hdr-actions">
+        <button id="btnRefresh">⟳ Rescan</button>
+      </div>
+      <div class="err-note" id="errNote"></div>
+    </div>
+
+    <div class="wl-controls">
+      <div class="wl-tabs">
+        <button data-f="all">ALL</button>
+        <button data-f="zone">IN DIP ZONE <span class="n" id="nZone">—</span></button>
+        <button data-f="watch">WATCHING <span class="n" id="nWatch">—</span></button>
+      </div>
+      <input id="wlSearch" type="search" placeholder="⌕ SEARCH_SYMBOL…" autocomplete="off">
+    </div>
+
+    <div class="wl-grid" id="wlGrid"><div class="note">Scanning…</div></div>
+  </main>
+</div>
+
+<footer class="disclaimer">
+  Cards are sorted by snapback readiness (a blend of volatility-adjusted dip depth, RSI(14) and 5-day pullback).
+  Tier badges (T1–T5) are earned from completed trade history and unlock with the Phase 2 signal engine — until
+  then every ticker sits at T1 · COILED, matching the "not enough proof yet" rule. Quotes ~15 min delayed.
+  Independent personal tool — not affiliated with Big Dipper Trades. Not financial advice.
+</footer>
+<script src="bdt.js"></script>
+</body>
+</html>

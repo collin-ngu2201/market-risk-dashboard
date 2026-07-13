@@ -20,6 +20,22 @@ and gold/silver. Auto-refreshes every 60 seconds.
 When opened as a plain local file (no Netlify), the page detects that `/api/health`
 is absent and falls back to public CORS proxies — it still works, just less reliably.
 
+## Dip Radar (`/bdt/`)
+
+A second app in this repo, inspired by the Big Dipper Trades command center (independent,
+not affiliated): a dip-and-snapback scanner over a ~66-ticker universe of large caps and
+sector ETFs. Dip depth is volatility-normalized (distance below the 20-day closing high in
+units of each ticker's own 20-day daily volatility), mapped to a 5-state ladder
+(NO DIP → EASING → DIPPING → DIP ZONE → DEEP DIP) plus a 0–100 snapback-readiness score
+blending depth, RSI(14) and 5-day pullback.
+
+- `/bdt/` — Command Center: stat tiles, 12-sector radar, top snapback candidates
+- `/bdt/watchlist.html` — full universe, filter tabs, symbol search
+- Data: `/api/bdt` batch function (Yahoo chart API server-side, allowlisted symbols,
+  4 requests per scan); falls back to public CORS proxies when opened without Netlify.
+- Phase 2 (planned): scheduled scanner + Netlify Blobs for fired signals with
+  entry/target/stop tracking, alerts feed, earned T1–T5 tiers and win-rate stats.
+
 ## Deploy (Netlify + GitHub)
 
 1. Push this repo to GitHub.

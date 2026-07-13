@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#050810">
+<title>Dip Radar — Command Center</title>
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
+<link rel="stylesheet" href="bdt.css">
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="layout">
+
+  <aside class="side">
+    <div class="logo">Dip<br>Radar <small>SNAPBACK SCANNER</small></div>
+    <nav class="nav">
+      <a href="index.html" class="active">▦ Dashboard</a>
+      <a href="watchlist.html">≡ Watchlist</a>
+      <span class="soon">◎ Setups <span class="tag">SOON</span></span>
+      <span class="soon">✧ Alerts <span class="tag">SOON</span></span>
+      <span class="soon">∿ Performance <span class="tag">SOON</span></span>
+    </nav>
+    <div class="spacer"></div>
+    <div class="sysbox">
+      SYS.STATUS: <b id="sysMkt" class="ok">—</b><br>
+      LAST_SCAN: <b id="sysLast">—</b> <span id="scanDot" class="dot"></span><br>
+      NEXT_SCAN: <b id="sysNext">—</b><br>
+      QUOTES: ~15 MIN DELAYED
+    </div>
+    <div class="backlink"><a href="/">← US Market Risk Dashboard</a></div>
+  </aside>
+
+  <main class="main">
+    <div class="pagehead">
+      <div class="crumb">Dip Radar</div>
+      <h1>Command Center</h1>
+      <div class="sub">Live dip states · Sector radar · Snapback candidates</div>
+      <div class="hdr-actions">
+        <a class="btn" href="watchlist.html">⌁ View Watchlist →</a>
+        <button id="btnRefresh">⟳ Rescan</button>
+        <span class="note">auto-rescans every 60s</span>
+      </div>
+      <div class="err-note" id="errNote"></div>
+    </div>
+
+    <section class="tiles">
+      <div class="tile green">
+        <div class="lbl">In Dip Zone ⌁</div>
+        <div class="val" id="tZone">—</div>
+        <div class="cap">tickers in buy-signal territory</div>
+      </div>
+      <div class="tile yellow">
+        <div class="lbl">Watching ◉</div>
+        <div class="val" id="tWatch">—</div>
+        <div class="cap">pulling back toward the zone</div>
+      </div>
+      <div class="tile cyan">
+        <div class="lbl">Universe ▤</div>
+        <div class="val" id="tUni">—</div>
+        <div class="cap">tickers loaded this scan</div>
+      </div>
+      <div class="tile">
+        <div class="lbl">Signal Engine ⚙</div>
+        <div class="val" style="font-size:22px;color:var(--dim);margin-top:14px">PHASE 2</div>
+        <div class="cap">entries, targets &amp; stop tracking — coming next</div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-bottom:22px">
+      <h3>Sector Radar <span class="sub">· snapback readiness by sector · volatility-adjusted dip depth</span>
+        <span class="sub" id="radarActive" style="margin-left:auto">—</span></h3>
+      <div class="legend">
+        <span><s style="background:var(--green)"></s>DIP ZONE — buy-signal territory</span>
+        <span><s style="background:var(--lime)"></s>PRIMED — approaching dip zone</span>
+        <span><s style="background:var(--yellow)"></s>WATCH — pulling back</span>
+        <span><s style="background:var(--dim)"></s>EXTENDED — no setup yet</span>
+      </div>
+      <div class="radar-grid" id="radarGrid"></div>
+      <div class="callout" id="radarCallout">Scanning…</div>
+    </section>
+
+    <section class="card">
+      <h3>Snapback Candidates <span class="sub">· deepest volatility-adjusted dips across the full universe, ranked by readiness</span></h3>
+      <div class="cands" id="candList"><div class="note">Scanning…</div></div>
+    </section>
+  </main>
+</div>
+
+<footer class="disclaimer">
+  Dip states are computed from ~15-minute-delayed Yahoo Finance daily closes: dip depth is the distance below
+  the 20-day closing high measured in units of each ticker's own 20-day volatility; readiness blends depth,
+  RSI(14) and 5-day pullback. Layout inspired by Big Dipper Trades (findbettertrades.com) — this is an
+  independent personal tool, not affiliated. Informational only — not financial advice.
+</footer>
+<script src="bdt.js"></script>
+</body>
+</html>
