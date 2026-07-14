@@ -20,6 +20,13 @@ export const INTERVALS = new Set(["5m", "15m", "30m", "1h", "1d", "1wk"]);
 
 export const r4 = (v) => (v == null || isNaN(v) ? null : Math.round(v * 10000) / 10000);
 
+// Blob stores connected with a custom env prefix expose e.g.
+// MYSTORE_READ_WRITE_TOKEN instead of BLOB_READ_WRITE_TOKEN — accept any.
+export const blobToken = () =>
+  process.env.BLOB_READ_WRITE_TOKEN ||
+  process.env[Object.keys(process.env).find((k) => k.endsWith("_READ_WRITE_TOKEN")) || ""] ||
+  null;
+
 // One Yahoo v8 chart call -> compact series {t,c,h,l,price,prevClose,...}
 export async function fetchOne(symbol, range, interval) {
   const upstream =

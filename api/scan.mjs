@@ -5,7 +5,7 @@
 import { put, list } from "@vercel/blob";
 import {
   UNIVERSE, fetchOne, dailyDip, bracketFor, evalEngine,
-  isMarketOpen, etDay, r4,
+  isMarketOpen, etDay, r4, blobToken,
 } from "./_shared.mjs";
 
 export const maxDuration = 60;
@@ -17,7 +17,7 @@ const MAX_CLOSED = 500;
 const emptyState = () => ({ v: 1, lastScan: 0, open: {}, closed: [], alerts: [] });
 
 async function loadState() {
-  const { blobs } = await list({ prefix: STATE_PATH, limit: 1 });
+  const { blobs } = await list({ prefix: STATE_PATH, limit: 1, token: blobToken() });
   if (!blobs.length) return emptyState();
   const r = await fetch(blobs[0].url + "?ts=" + Date.now(), { cache: "no-store" });
   if (!r.ok) return emptyState();
@@ -26,7 +26,7 @@ async function loadState() {
 async function saveState(s) {
   await put(STATE_PATH, JSON.stringify(s), {
     access: "public", addRandomSuffix: false, allowOverwrite: true,
-    contentType: "application/json", cacheControlMaxAge: 60,
+    contentType: "application/json", cacheControlMaxAge: 60, token: blobToken(),
   });
 }
 const alert = (s, a) => { s.alerts.unshift({ ts: Date.now(), ...a }); s.alerts.length = Math.min(s.alerts.length, MAX_ALERTS); };
@@ -34,7 +34,7 @@ const alert = (s, a) => { s.alerts.unshift({ ts: Date.now(), ...a }); s.alerts.l
 const chunk = (arr, n) => { const o = []; for (let i = 0; i < arr.length; i += n) o.push(arr.slice(i, i + n)); return o; };
 
 export const GET = async (req) => {
-  if (!process.env.BLOB_READ_WRITE_TOKEN)
+  if (!blobToken())
     return Response.json({ ok: false, configured: false,
       error: "Blob store not connected — create one in Vercel → project → Storage" }, { status: 503 });
 
