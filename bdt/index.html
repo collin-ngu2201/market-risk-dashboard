@@ -17,8 +17,8 @@
     <nav class="nav">
       <a href="index.html" class="active">▦ Dashboard</a>
       <a href="watchlist.html">≡ Watchlist</a>
-      <span class="soon">◎ Setups <span class="tag">SOON</span></span>
-      <span class="soon">✧ Alerts <span class="tag">SOON</span></span>
+      <a href="setups.html">◎ Setups</a>
+      <a href="alerts.html">✧ Alerts</a>
       <span class="soon">∿ Performance <span class="tag">SOON</span></span>
     </nav>
     <div class="spacer"></div>
@@ -45,26 +45,32 @@
     </div>
 
     <section class="tiles">
+      <div class="tile cyan">
+        <div class="lbl">Active Signals ⚡</div>
+        <div class="val" id="tActive">—</div>
+        <div class="cap">live open trades</div>
+      </div>
+      <div class="tile yellow">
+        <div class="lbl">Today's Signals ⌁</div>
+        <div class="val" id="tToday">—</div>
+        <div class="cap">fired today (ET)</div>
+      </div>
       <div class="tile green">
-        <div class="lbl">In Dip Zone ⌁</div>
+        <div class="lbl">In Dip Zone ◉</div>
         <div class="val" id="tZone">—</div>
         <div class="cap">tickers in buy-signal territory</div>
       </div>
-      <div class="tile yellow">
-        <div class="lbl">Watching ◉</div>
-        <div class="val" id="tWatch">—</div>
-        <div class="cap">pulling back toward the zone</div>
-      </div>
-      <div class="tile cyan">
-        <div class="lbl">Universe ▤</div>
-        <div class="val" id="tUni">—</div>
-        <div class="cap">tickers loaded this scan</div>
-      </div>
       <div class="tile">
-        <div class="lbl">Signal Engine ⚙</div>
-        <div class="val" style="font-size:22px;color:var(--dim);margin-top:14px">PHASE 2</div>
-        <div class="cap">entries, targets &amp; stop tracking — coming next</div>
+        <div class="lbl">Total Trades ▤</div>
+        <div class="val" id="tDone">—</div>
+        <div class="cap">completed signals tracked</div>
       </div>
+    </section>
+
+    <section class="card" style="margin-bottom:22px">
+      <h3>Recent Signals <span class="sub">· live open trades from the signal engine</span>
+        <a href="setups.html" class="sub" style="margin-left:auto">VIEW ALL →</a></h3>
+      <div class="cands" id="recentSigs"><div class="note">Loading…</div></div>
     </section>
 
     <section class="card" style="margin-bottom:22px">

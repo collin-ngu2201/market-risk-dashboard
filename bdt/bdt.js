@@ -125,6 +125,49 @@ const cache=(()=>{try{return JSON.parse(localStorage.getItem(CKEY)||'{}');}catch
 function cachePut(k,data){cache[k]={t:Date.now(),data};try{localStorage.setItem(CKEY,JSON.stringify(cache));}catch(e){}}
 function cacheGet(k,maxAgeMs=24*3600e3){const e=cache[k];return e&&(Date.now()-e.t)<maxAgeMs?e:null;}
 
+/* ---------------- signal engine client ----------------
+   /api/scan runs the throttled server-side scan (fire-and-forget kick);
+   /api/signals returns its state: open trades, closed log, alerts feed.
+   Tiers are earned per ticker from the completed record, matching the
+   "tiers are earned, not assigned" rule: T5 APEX >=85% win rate,
+   T4 PRIME 75-84, T3 LOCK 65-74, T2 SNAP 50-64, T1 COILED under 50%
+   or fewer than 5 completed trades. */
+const sig={configured:null,lastScan:0,open:{},closed:[],alerts:[]};
+async function loadSignals(){
+  if(!FN_MODE){sig.configured=false;return;}
+  try{
+    const r=await fetch('/api/signals',{signal:AbortSignal.timeout(10000),cache:'no-store'});
+    const j=await r.json();
+    sig.configured=!!j.configured;
+    if(j.configured){sig.lastScan=j.lastScan||0;sig.open=j.open||{};sig.closed=j.closed||[];sig.alerts=j.alerts||[];}
+  }catch(e){if(sig.configured==null)sig.configured=false;}
+}
+let lastKick=0;
+function kickScan(){
+  if(!FN_MODE||Date.now()-lastKick<5*60*1000)return;
+  lastKick=Date.now();
+  fetch('/api/scan',{cache:'no-store'}).catch(()=>{});
+}
+function tierFor(sym){
+  const done=sig.closed.filter(c=>c.sym===sym);
+  const wins=done.filter(c=>c.result==='win').length,n=done.length;
+  const rate=n?wins/n*100:null;
+  let t='T1 · COILED';
+  if(n>=5&&rate>=85)t='T5 · APEX';
+  else if(n>=5&&rate>=75)t='T4 · PRIME';
+  else if(n>=5&&rate>=65)t='T3 · LOCK';
+  else if(n>=5&&rate>=50)t='T2 · SNAP';
+  return {tier:t,n,wins,losses:n-wins,rate};
+}
+const etTime=ts=>new Date(ts).toLocaleString('en-US',{timeZone:'America/New_York',
+  month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+const etDayStr=ts=>new Date(ts).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
+function progressPct(tr){const cur=tr.cur??tr.entry;return clamp((cur-tr.entry)/(tr.tp-tr.entry)*100,0,100);}
+function nearStop(tr){const cur=tr.cur??tr.entry;return cur<tr.entry&&(tr.entry-cur)/(tr.entry-tr.sl)>0.5;}
+const gainPct=tr=>((tr.cur??tr.entry)/tr.entry-1)*100;
+const ENGINE_NOTE='Signal engine storage is not connected yet — in the Vercel dashboard open the '
+ +'dip-radar project → Storage → Create Database → Blob, connect it, then redeploy. Scans start automatically after that.';
+
 /* ---------------- dip / snapback math ----------------
    d = depth of the current pullback below the 20-day closing high,
        measured in units of the ticker's own 20-day daily volatility.
@@ -262,10 +305,29 @@ function renderDashboard(){
   if(!$('#radarGrid'))return;
   const A=state.analysis;
   const inZone=UNIVERSE.filter(s=>A[s]&&(A[s].state==='DIP_ZONE'||A[s].state==='DEEP_DIP'));
-  const watching=UNIVERSE.filter(s=>A[s]&&A[s].watching);
+  const openTr=Object.values(sig.open);
+  const today=etDayStr(Date.now());
+  const firedToday=sig.alerts.filter(a=>a.type==='entry'&&etDayStr(a.ts)===today).length;
   $('#tZone').textContent=inZone.length;
-  $('#tWatch').textContent=watching.length;
-  $('#tUni').textContent=Object.keys(A).length+' / '+UNIVERSE.length;
+  if($('#tActive'))$('#tActive').textContent=sig.configured?openTr.length:'—';
+  if($('#tToday'))$('#tToday').textContent=sig.configured?firedToday:'—';
+  if($('#tDone'))$('#tDone').textContent=sig.configured?sig.closed.length:'—';
+
+  // recent signals: live open trades, newest first
+  const rs=$('#recentSigs');
+  if(rs){
+    if(sig.configured===false)rs.innerHTML=`<div class="note">${esc(ENGINE_NOTE)}</div>`;
+    else if(!openTr.length)rs.innerHTML='<div class="note">No live signals — the engine scans every ~30 minutes during market hours.</div>';
+    else rs.innerHTML=openTr.sort((a,b)=>b.firedAt-a.firedAt).slice(0,5).map(tr=>{
+      const g=gainPct(tr),p=progressPct(tr);
+      return `<div class="cand">${avatarHTML(tr.sym)}
+        <div style="min-width:130px"><span class="tick">${tr.sym}</span> <span class="badge tier">${tierFor(tr.sym).tier}</span>
+          <div class="nm">Entry $${fmtN(tr.entry,2)} → TP $${fmtN(tr.tp,2)} · SL $${fmtN(tr.sl,2)}</div></div>
+        <div class="mid"><div class="rl" style="display:flex;justify-content:space-between;font-size:9.5px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-bottom:4px"><span>${Math.round(p)}% to target</span><b style="color:var(--muted)">${etTime(tr.firedAt)}</b></div>
+          <div class="rbar"><i style="width:${p}%;background:var(--cyan)"></i></div></div>
+        <div class="rt"><div class="px">${chgHTML(g)}</div><div class="sub">$${fmtN(tr.cur??tr.entry,2)} now</div></div>
+      </div>`;}).join('');
+  }
 
   // sector radar
   $('#radarGrid').innerHTML=RADAR.map(([sym,name,desc])=>{
@@ -328,18 +390,23 @@ function renderWatchlist(){
   $$('.wl-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.f===wlFilter));
   $('#wlGrid').innerHTML=list.length?list.map(sym=>{
     const a=A[sym];
-    const cls=a.state==='DIP_ZONE'||a.state==='DEEP_DIP'?'dipzone':a.watching?'watching':'';
+    const t=tierFor(sym);
+    const active=!!sig.open[sym];
+    const cls=active?'dipzone':a.state==='DIP_ZONE'||a.state==='DEEP_DIP'?'dipzone':a.watching?'watching':'';
+    const statusBadge=active?'<span class="badge dipzone">● ACTIVE</span>'
+      :`<span class="badge ${a.watching?'watching':'none'}">${a.watching?'● WATCHING':'○ NONE'}</span>`;
     return `<div class="wcard ${cls}">
       <div class="top">${avatarHTML(sym)}
-        <div><span class="tick">${sym}</span> <span class="badge tier" title="Tiers are earned from completed trade history — signal engine arrives in Phase 2">T1 · COILED</span>
+        <div><span class="tick">${sym}</span> <span class="badge tier" title="Tiers are earned from the ticker's completed trade record (needs 5 finished trades to rank above Coiled)">${t.tier}</span>
           <div class="nm">${esc(NAMES[sym]||a.name||'')}</div></div>
-        <span class="badge ${a.watching?'watching':'none'}">${a.watching?'● WATCHING':'○ NONE'}</span></div>
+        ${statusBadge}</div>
       <div class="cols">
         <div><span class="k">Price</span><span class="px">$${fmtN(a.last,2)}</span><br>${chgHTML(a.dayChg)}</div>
         <div><span class="k">The Dip</span><span class="dipword dip-${a.state}">${STATE_WORD[a.state]}</span>
           ${meterHTML(a.state)}
           <span class="note" style="font-size:9.5px">${fmtPct(a.offHigh)} off 20d high · RSI ${a.rsi==null?'—':Math.round(a.rsi)}</span></div>
-        <div class="rt">${a.readiness}%<span class="sub">readiness</span><span class="sub" style="margin-top:4px">win rate — <br>no trades yet</span></div>
+        <div class="rt">${a.readiness}%<span class="sub">readiness</span>
+          <span class="sub" style="margin-top:4px">${t.n?`win rate ${Math.round(t.rate)}%<br>${t.wins}W ${t.losses}L`:'win rate —<br>no trades yet'}</span></div>
       </div>
     </div>`;
   }).join(''):'<div class="note">No tickers match.</div>';
@@ -352,12 +419,83 @@ function wireWatchlist(){
   $('#wlSearch').addEventListener('input',e=>{wlQuery=e.target.value.trim().toUpperCase();renderWatchlist();});
 }
 
+/* ---------------- page: setups ---------------- */
+let suFilter=localStorage.getItem('bdt.su.filter')||'best';
+function tradeCardHTML(tr,closed){
+  const t=tierFor(tr.sym);
+  const g=closed?tr.pct:gainPct(tr);
+  const p=closed?(tr.result==='win'?100:0):progressPct(tr);
+  const cur=closed?tr.exit:(tr.cur??tr.entry);
+  const resBadge=closed
+    ?`<span class="badge ${tr.result==='win'?'dipzone':'stopped'}">${tr.result==='win'?'✓ TARGET HIT':'✕ STOPPED OUT'}</span>`
+    :'<span class="badge live">⚡ LIVE</span>';
+  return `<div class="trade ${closed?tr.result:'active'}">
+    <div class="thead">
+      <div><span class="badge buy">BUY</span> <span class="badge tier">${t.tier}</span> <span class="badge shares">SHARES</span>
+        <div class="tsym">${avatarHTML(tr.sym)} <b>${tr.sym}</b> <span class="nm">${esc(NAMES[tr.sym]||'')}</span></div></div>
+      <div class="tgain">${resBadge}<div class="big ${g>=0?'chg up':'chg down'}" style="background:none">${fmtPct(g)}</div>
+        <div class="sub">${closed?'closed '+etTime(tr.closedAt):'stock gain'}</div></div>
+    </div>
+    <div class="pxgrid">
+      <div><span class="k">Entry price</span><b>$${fmtN(tr.entry,2)}</b><span class="sub">${etTime(tr.firedAt)}</span></div>
+      <div><span class="k">${closed?'Exit price':'Current price'}</span><b>$${fmtN(cur,2)}</b></div>
+      <div class="slbox"><span class="k">Stop loss</span><b>$${fmtN(tr.sl,2)}</b></div>
+      <div class="tpbox"><span class="k">Target</span><b>$${fmtN(tr.tp,2)}</b></div>
+    </div>
+    <div class="prog"><div class="pl">${Math.round(p)}% of the way to target</div>
+      <div class="rbar" style="height:9px"><i style="width:${p}%;background:${closed&&tr.result==='loss'?'var(--red)':'var(--cyan)'}"></i></div></div>
+  </div>`;
+}
+function renderSetups(){
+  if(!$('#suList'))return;
+  if(sig.configured===false){$('#suList').innerHTML=`<div class="note">${esc(ENGINE_NOTE)}</div>`;$('#suCount').textContent='ENGINE NOT CONFIGURED';return;}
+  const open=Object.values(sig.open).sort((a,b)=>progressPct(b)-progressPct(a));
+  const won=sig.closed.filter(c=>c.result==='win');
+  const lost=sig.closed.filter(c=>c.result==='loss');
+  $('#nActive').textContent=open.length;$('#nWon').textContent=won.length;$('#nLost').textContent=lost.length;
+  $('#suCount').textContent=(open.length+sig.closed.length)+' TOTAL · '+won.length+'W '+lost.length+'L';
+  $$('.wl-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.f===suFilter));
+  const note=$('#suNote');
+  if(note)note.style.display=suFilter==='best'?'block':'none';
+  let html='';
+  if(suFilter==='best')html=open.filter(tr=>!nearStop(tr)).slice(0,5).map(tr=>tradeCardHTML(tr,false)).join('');
+  else if(suFilter==='active')html=open.map(tr=>tradeCardHTML(tr,false)).join('');
+  else if(suFilter==='won')html=won.map(tr=>tradeCardHTML(tr,true)).join('');
+  else if(suFilter==='lost')html=lost.map(tr=>tradeCardHTML(tr,true)).join('');
+  else html=[...open.map(tr=>tradeCardHTML(tr,false)),...sig.closed.map(tr=>tradeCardHTML(tr,true))].join('');
+  $('#suList').innerHTML=html||'<div class="note">Nothing here yet — signals appear when the engine confirms all 4 conditions during market hours.</div>';
+}
+function wireSetups(){
+  if(!$('#suList'))return;
+  $$('.wl-tabs button').forEach(b=>b.addEventListener('click',()=>{
+    suFilter=b.dataset.f;localStorage.setItem('bdt.su.filter',suFilter);renderSetups();
+  }));
+}
+
+/* ---------------- page: alerts ---------------- */
+function renderAlertsPage(){
+  if(!$('#alList'))return;
+  if(sig.configured===false){$('#alList').innerHTML=`<div class="note">${esc(ENGINE_NOTE)}</div>`;return;}
+  if(!sig.alerts.length){$('#alList').innerHTML='<div class="note">No alerts yet — new setups, target hits and stop-outs land here as they happen.</div>';return;}
+  const BADGE={entry:['live','⚡ NEW SETUP'],win:['dipzone','◎ HIT TARGET'],loss:['stopped','✕ STOPPED OUT']};
+  $('#alList').innerHTML=sig.alerts.map(a=>{
+    const [cls,word]=BADGE[a.type]||['none',a.type.toUpperCase()];
+    return `<div class="alrow ${a.type}">${avatarHTML(a.sym)}
+      <div class="amain"><div><b class="tick">${a.sym}</b> <span class="badge ${cls}">${word}</span></div>
+        <div class="sub">$${fmtN(a.price,2)} · ${etTime(a.ts)}</div>
+        <div class="amsg">${esc(a.msg||'')}</div></div>
+      ${a.pct!=null?`<div class="rt">${chgHTML(a.pct)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
 /* ---------------- boot ---------------- */
 let refreshing=false;
 async function refreshAll(){
   if(refreshing)return;refreshing=true;
   const btn=$('#btnRefresh');if(btn){btn.disabled=true;btn.textContent='SCANNING…';}
-  const {mode,ok}=await loadUniverse();
+  kickScan();
+  const [{mode,ok}]=await Promise.all([loadUniverse(),loadSignals()]);
   const dot=$('#scanDot');
   if(dot)dot.className='dot '+(mode==='live'?'live':mode==='stale'?'stale':'err');
   const en=$('#errNote');
@@ -366,14 +504,14 @@ async function refreshAll(){
     else if(ok<UNIVERSE.length&&mode==='live'){en.style.display='block';en.textContent=`⚠ ${UNIVERSE.length-ok} of ${UNIVERSE.length} tickers failed to load this cycle.`;}
     else en.style.display='none';
   }
-  renderDashboard();renderWatchlist();
+  renderDashboard();renderWatchlist();renderSetups();renderAlertsPage();
   if(btn){btn.disabled=false;btn.textContent='⟳ RESCAN';}
   nextRefresh=Date.now()+REFRESH_MS;
   refreshing=false;
 }
 document.addEventListener('DOMContentLoaded',async()=>{
   starfield();
-  wireWatchlist();
+  wireWatchlist();wireSetups();
   const btn=$('#btnRefresh');if(btn)btn.addEventListener('click',refreshAll);
   setInterval(()=>{tickSys();if(Date.now()>=nextRefresh&&!document.hidden)refreshAll();},1000);
   tickSys();

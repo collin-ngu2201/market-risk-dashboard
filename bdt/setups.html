@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#050810">
-<title>Dip Radar — Watchlist</title>
+<title>Dip Radar — Setups</title>
 <link rel="icon" type="image/png" href="/icons/icon-192.png">
 <link rel="stylesheet" href="bdt.css">
 </head>
@@ -16,8 +16,8 @@
     <div class="logo">Dip<br>Radar <small>SNAPBACK SCANNER</small></div>
     <nav class="nav">
       <a href="index.html">▦ Dashboard</a>
-      <a href="watchlist.html" class="active">≡ Watchlist</a>
-      <a href="setups.html">◎ Setups</a>
+      <a href="watchlist.html">≡ Watchlist</a>
+      <a href="setups.html" class="active">◎ Setups</a>
       <a href="alerts.html">✧ Alerts</a>
       <span class="soon">∿ Performance <span class="tag">SOON</span></span>
     </nav>
@@ -34,8 +34,8 @@
   <main class="main">
     <div class="pagehead">
       <div class="crumb">Dip Radar</div>
-      <h1>Watchlist</h1>
-      <div class="sub" id="wlCount">—</div>
+      <h1>Setups</h1>
+      <div class="sub" id="suCount">—</div>
       <div class="hdr-actions">
         <button id="btnRefresh">⟳ Rescan</button>
       </div>
@@ -44,22 +44,27 @@
 
     <div class="wl-controls">
       <div class="wl-tabs">
-        <button data-f="all">ALL</button>
-        <button data-f="zone">IN DIP ZONE <span class="n" id="nZone">—</span></button>
-        <button data-f="watch">WATCHING <span class="n" id="nWatch">—</span></button>
+        <button data-f="best">★ BEST PICKS</button>
+        <button data-f="active">ALL ACTIVE <span class="n" id="nActive">—</span></button>
+        <button data-f="won">WON <span class="n" id="nWon">—</span></button>
+        <button data-f="lost">LOST <span class="n" id="nLost">—</span></button>
+        <button data-f="log">FULL LOG</button>
       </div>
-      <input id="wlSearch" type="search" placeholder="⌕ SEARCH_SYMBOL…" autocomplete="off">
     </div>
 
-    <div class="wl-grid" id="wlGrid"><div class="note">Scanning…</div></div>
+    <div class="tabnote" id="suNote"><b>★ BEST PICKS</b> — live setups making the most progress toward
+      target right now. Near-stop signals are excluded. Switch to ALL ACTIVE to see everything.</div>
+
+    <div class="trades" id="suList"><div class="note">Loading…</div></div>
   </main>
 </div>
 
 <footer class="disclaimer">
-  Cards are sorted by snapback readiness (a blend of volatility-adjusted dip depth, RSI(14) and 5-day pullback).
-  Tier badges (T1–T5) are earned from completed trade history and unlock with the Phase 2 signal engine — until
-  then every ticker sits at T1 · COILED, matching the "not enough proof yet" rule. Quotes ~15 min delayed.
-  Independent personal tool — not affiliated with Big Dipper Trades. Not financial advice.
+  Signals fire when all four engine conditions confirm on a completed 30-minute bar: IN ZONE (dip depth
+  ≥ 1.75× the ticker's own 20-day volatility below its 20-day high), BREAKOUT (close above the prior bar's
+  high), UPTURN (30-min RSI rising) and STRONG BAR (close in the upper 60% of the bar's range). Targets and
+  stops are volatility-scaled (~3× / ~7.5× daily vol, clamped); if a bar spans both, the stop wins. Long only,
+  one open trade per ticker. Quotes ~15 min delayed. These are algorithmic markers for study — not financial advice.
 </footer>
 <script src="bdt.js"></script>
 </body>
