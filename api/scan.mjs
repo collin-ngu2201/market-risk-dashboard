@@ -2,10 +2,10 @@
 // State (open trades, closed log, alerts) lives in one JSON file on
 // Vercel Blob; without a connected Blob store this reports "not configured"
 // and the UI degrades gracefully.
-import { put, list } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import {
   UNIVERSE, fetchOne, dailyDip, bracketFor, evalEngine,
-  isMarketOpen, etDay, r4, blobToken,
+  isMarketOpen, etDay, r4, blobToken, readBlobJson, BLOB_ACCESS,
 } from "./_shared.mjs";
 
 export const maxDuration = 60;
@@ -17,15 +17,11 @@ const MAX_CLOSED = 500;
 const emptyState = () => ({ v: 1, lastScan: 0, open: {}, closed: [], alerts: [] });
 
 async function loadState() {
-  const { blobs } = await list({ prefix: STATE_PATH, limit: 1, token: blobToken() });
-  if (!blobs.length) return emptyState();
-  const r = await fetch(blobs[0].url + "?ts=" + Date.now(), { cache: "no-store" });
-  if (!r.ok) return emptyState();
-  try { return await r.json(); } catch { return emptyState(); }
+  return (await readBlobJson(STATE_PATH)) || emptyState();
 }
 async function saveState(s) {
   await put(STATE_PATH, JSON.stringify(s), {
-    access: "public", addRandomSuffix: false, allowOverwrite: true,
+    access: BLOB_ACCESS, addRandomSuffix: false, allowOverwrite: true,
     contentType: "application/json", cacheControlMaxAge: 60, token: blobToken(),
   });
 }

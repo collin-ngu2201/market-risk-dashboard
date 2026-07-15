@@ -1,6 +1,7 @@
 // Shared server-side code for the Dip Radar functions (files prefixed with
 // "_" inside api/ are not exposed as routes by Vercel).
 // Universe allowlist, Yahoo chart fetch, indicators, dip math, trade rules.
+import { list } from "@vercel/blob";
 
 export const UNIVERSE = new Set([
   // sector radar ETFs
@@ -26,6 +27,22 @@ export const blobToken = () =>
   process.env.BLOB_READ_WRITE_TOKEN ||
   process.env[Object.keys(process.env).find((k) => k.endsWith("_READ_WRITE_TOKEN")) || ""] ||
   null;
+
+// The Dip Radar store is a PRIVATE blob store, so its blob URLs are not
+// publicly fetchable — reads must carry the token as a Bearer header
+// (per Vercel's private-storage docs). Writes use access: "private".
+export const BLOB_ACCESS = "private";
+export async function readBlobJson(prefix) {
+  const token = blobToken();
+  if (!token) return null;
+  const { blobs } = await list({ prefix, limit: 1, token });
+  if (!blobs.length) return null;
+  const r = await fetch(blobs[0].url, {
+    headers: { authorization: "Bearer " + token }, cache: "no-store",
+  });
+  if (!r.ok) return null;
+  try { return await r.json(); } catch { return null; }
+}
 
 // One Yahoo v8 chart call -> compact series {t,c,h,l,price,prevClose,...}
 export async function fetchOne(symbol, range, interval) {
