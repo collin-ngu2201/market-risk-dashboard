@@ -489,6 +489,106 @@ function renderAlertsPage(){
   }).join('');
 }
 
+/* ---------------- page: performance ----------------
+   Aggregates every completed trade (backtested + live) into headline stats,
+   an equity curve, monthly bars and a per-ticker table. Backtest trades are
+   tagged bt:1; a first visit with an empty log kicks /api/backtest to seed. */
+function tradeStats(list){
+  const n=list.length, wins=list.filter(t=>t.result==='win'), losses=list.filter(t=>t.result==='loss');
+  const sum=a=>a.reduce((s,t)=>s+(t.pct||0),0);
+  const grossWin=sum(wins), grossLoss=Math.abs(sum(losses));
+  return {n,w:wins.length,l:losses.length,
+    winRate:n?wins.length/n*100:null,
+    expectancy:n?sum(list)/n:null,
+    avgWin:wins.length?grossWin/wins.length:null,
+    avgLoss:losses.length?-grossLoss/losses.length:null,
+    profitFactor:grossLoss>0?grossWin/grossLoss:(grossWin>0?Infinity:null),
+    net:sum(list)};
+}
+let btKicked=false;
+function kickBacktest(){
+  if(!FN_MODE||btKicked)return;btKicked=true;
+  fetch('/api/backtest',{cache:'no-store'}).then(r=>r.json()).then(()=>{
+    setTimeout(()=>loadSignals().then(()=>{renderPerformance();renderWatchlist();renderSetups();renderDashboard();}),1200);
+  }).catch(()=>{});
+}
+function renderPerformance(){
+  if(!$('#perfBody'))return;
+  if(sig.configured===false){$('#perfBody').innerHTML=`<div class="note">${esc(ENGINE_NOTE)}</div>`;return;}
+  const closed=sig.closed||[];
+  if(!closed.length){
+    $('#perfBody').innerHTML='<div class="note">No completed trades yet — seeding the historical backtest now, this can take a few seconds. '
+      +'<button id="btRun" style="margin-left:8px">Run backtest</button></div>';
+    const b=$('#btRun');if(b)b.addEventListener('click',()=>{btKicked=false;kickBacktest();});
+    kickBacktest();
+    return;
+  }
+  const S=tradeStats(closed);
+  const btN=closed.filter(t=>t.bt).length, liveN=closed.length-btN;
+  const pf=S.profitFactor==null?'—':S.profitFactor===Infinity?'∞':S.profitFactor.toFixed(2);
+  const tiles=[
+    ['Win Rate',S.winRate==null?'—':Math.round(S.winRate)+'%',`${S.w}W · ${S.l}L`,S.winRate>=55?'green':S.winRate>=45?'yellow':'cyan'],
+    ['Expectancy',S.expectancy==null?'—':(S.expectancy>=0?'+':'')+S.expectancy.toFixed(2)+'%','avg per trade',S.expectancy>=0?'green':'cyan'],
+    ['Profit Factor',pf,'gross win ÷ loss','cyan'],
+    ['Total Trades',String(S.n),`${btN} backtested · ${liveN} live`,'yellow'],
+  ];
+  // equity curve (cumulative % over chronological trades)
+  const chrono=[...closed].sort((a,b)=>a.closedAt-b.closedAt);
+  let cum=0;const eq=chrono.map(t=>(cum+=t.pct||0));
+  // monthly net %
+  const months={};
+  for(const t of chrono){const d=new Date(t.closedAt),k=d.toLocaleString('en-US',{timeZone:'America/New_York',month:'short',year:'2-digit'});
+    (months[k]=months[k]||{net:0,w:0,n:0}); months[k].net+=t.pct||0; months[k].n++; if(t.result==='win')months[k].w++;}
+  const mk=Object.keys(months);
+  // per-ticker
+  const bySym={};
+  for(const t of closed){(bySym[t.sym]=bySym[t.sym]||[]).push(t);}
+  const rows=Object.entries(bySym).map(([sym,l])=>({sym,...tradeStats(l),tier:tierFor(sym).tier}))
+    .sort((a,b)=>(b.winRate-a.winRate)||(b.n-a.n));
+
+  $('#perfBody').innerHTML=`
+    <section class="tiles">${tiles.map(([l,v,c,cl])=>`
+      <div class="tile ${cl}"><div class="lbl">${l}</div><div class="val">${v}</div><div class="cap">${c}</div></div>`).join('')}</section>
+    <section class="card" style="margin-bottom:16px"><h3>Equity Curve <span class="sub">· cumulative % across ${chrono.length} trades (1 unit per trade)</span></h3>
+      ${equitySVG(eq)}</section>
+    <section class="card" style="margin-bottom:16px"><h3>Monthly Net <span class="sub">· sum of trade returns by close month</span></h3>
+      ${monthlySVG(mk.map(k=>({k,...months[k]})))}</section>
+    <section class="card"><h3>By Ticker <span class="sub">· win rate across completed trades · tier is earned from this record</span></h3>
+      <div class="perf-grid">
+        <div class="ph">Ticker</div><div class="ph">Tier</div><div class="ph">Trades</div><div class="ph">Win rate</div><div class="ph">Avg / trade</div><div class="ph">Net</div>
+        ${rows.map(r=>`
+          <div class="pc"><b>${r.sym}</b> <span class="sub">${esc(NAMES[r.sym]||'')}</span></div>
+          <div class="pc"><span class="badge tier">${r.tier}</span></div>
+          <div class="pc">${r.w}W ${r.l}L</div>
+          <div class="pc"><div class="wbar"><i style="width:${Math.round(r.winRate)}%;background:${r.winRate>=55?'var(--green)':r.winRate>=45?'var(--yellow)':'var(--orange)'}"></i></div><span class="wpct">${Math.round(r.winRate)}%</span></div>
+          <div class="pc ${r.expectancy>=0?'up':'down'}" style="font-weight:700">${(r.expectancy>=0?'+':'')+r.expectancy.toFixed(2)}%</div>
+          <div class="pc ${r.net>=0?'up':'down'}" style="font-weight:700">${(r.net>=0?'+':'')+r.net.toFixed(1)}%</div>`).join('')}
+      </div></section>`;
+}
+function equitySVG(eq){
+  if(eq.length<2)return '<div class="note">Not enough trades for a curve yet.</div>';
+  const W=900,H=180,P=8,min=Math.min(0,...eq),max=Math.max(0,...eq),span=(max-min)||1;
+  const X=i=>P+i/(eq.length-1)*(W-2*P),Y=v=>H-P-((v-min)/span)*(H-2*P);
+  const d=eq.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
+  const up=eq[eq.length-1]>=0;const col=up?'var(--green)':'var(--red)';
+  const zeroY=Y(0);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="max-height:180px">
+    <line x1="${P}" y1="${zeroY}" x2="${W-P}" y2="${zeroY}" stroke="var(--border2)" stroke-dasharray="4 4"/>
+    <path d="${d} L ${X(eq.length-1)} ${zeroY} L ${X(0)} ${zeroY} Z" fill="${col}" opacity=".10"/>
+    <path d="${d}" fill="none" stroke="${col}" stroke-width="2"/></svg>
+    <div class="kv sub" style="display:flex;justify-content:space-between"><span>start</span><span>net ${up?'+':''}${eq[eq.length-1].toFixed(1)}%</span></div>`;
+}
+function monthlySVG(rows){
+  if(!rows.length)return '<div class="note">No monthly data yet.</div>';
+  const max=Math.max(1,...rows.map(r=>Math.abs(r.net)));
+  return `<div class="mrow">${rows.map(r=>{
+    const h=Math.max(2,Math.abs(r.net)/max*70),pos=r.net>=0;
+    return `<div class="mbar" title="${r.k}: ${pos?'+':''}${r.net.toFixed(1)}% · ${r.w}/${r.n} wins">
+      <div class="mb-top">${pos?`<i class="up" style="height:${h}px"></i>`:''}</div>
+      <div class="mb-bot">${!pos?`<i class="down" style="height:${h}px"></i>`:''}</div>
+      <span class="ml">${r.k}</span></div>`;}).join('')}</div>`;
+}
+
 /* ---------------- boot ---------------- */
 let refreshing=false;
 async function refreshAll(){
@@ -504,7 +604,7 @@ async function refreshAll(){
     else if(ok<UNIVERSE.length&&mode==='live'){en.style.display='block';en.textContent=`⚠ ${UNIVERSE.length-ok} of ${UNIVERSE.length} tickers failed to load this cycle.`;}
     else en.style.display='none';
   }
-  renderDashboard();renderWatchlist();renderSetups();renderAlertsPage();
+  renderDashboard();renderWatchlist();renderSetups();renderAlertsPage();renderPerformance();
   if(btn){btn.disabled=false;btn.textContent='⟳ RESCAN';}
   nextRefresh=Date.now()+REFRESH_MS;
   refreshing=false;

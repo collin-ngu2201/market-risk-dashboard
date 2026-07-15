@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#050810">
-<title>Dip Radar — Alerts</title>
+<title>Dip Radar — Performance</title>
 <link rel="icon" type="image/png" href="/icons/icon-192.png">
 <link rel="stylesheet" href="bdt.css">
 </head>
@@ -18,8 +18,8 @@
       <a href="index.html">▦ Dashboard</a>
       <a href="watchlist.html">≡ Watchlist</a>
       <a href="setups.html">◎ Setups</a>
-      <a href="alerts.html" class="active">✧ Alerts</a>
-      <a href="performance.html">∿ Performance</a>
+      <a href="alerts.html">✧ Alerts</a>
+      <a href="performance.html" class="active">∿ Performance</a>
     </nav>
     <div class="spacer"></div>
     <div class="sysbox">
@@ -34,21 +34,25 @@
   <main class="main">
     <div class="pagehead">
       <div class="crumb">Dip Radar</div>
-      <h1>Alerts</h1>
-      <div class="sub">New setups firing, take-profit hits and stop-outs — the feed persists so you never miss one. Newest first.</div>
+      <h1>Performance</h1>
+      <div class="sub">Win rate, expectancy &amp; profit factor across every completed trade — seeded from a historical backtest, extended by live signals.</div>
       <div class="hdr-actions">
         <button id="btnRefresh">⟳ Rescan</button>
       </div>
       <div class="err-note" id="errNote"></div>
     </div>
 
-    <div class="alerts" id="alList"><div class="note">Loading…</div></div>
+    <div id="perfBody"><div class="note">Loading…</div></div>
   </main>
 </div>
 
 <footer class="disclaimer">
-  The engine records an alert when a setup fires (all 4 conditions confirmed), when a target is hit and when a
-  stop closes a trade. The most recent 200 events are kept. Quotes ~15 min delayed. Not financial advice.
+  Backtest: a daily-bar mirror of the live engine over the past year (Yahoo serves too little 30-minute history to
+  backtest intraday). At each day it checks whether the ticker was in a dip entering the session (depth ≥ 1.75× its
+  own 20-day volatility below the 20-day high) and then had a strong breakout day, entering at the close with the
+  same volatility-scaled target/stop; a 15-bar time-stop closes anything that never reaches a level. Backtested trades
+  are marked separately from live ones. Past performance — real or simulated — does not guarantee future results.
+  Quotes ~15 min delayed. Not financial advice.
 </footer>
 <script src="bdt.js"></script>
 </body>

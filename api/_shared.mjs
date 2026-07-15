@@ -173,3 +173,54 @@ export const etDay = (date = new Date()) => {
   const p = etParts(date);
   return `${p.year}-${p.month}-${p.day}`;
 };
+
+/* ---------------- historical backtest (seeds win rates) ----------------
+   Yahoo only serves ~60 days of 30-min bars, too short to backtest, so the
+   seed runs a DAILY-bar mirror of the engine over a long window. It reads
+   the dip context from the PRIOR close (stock already in a dip) and uses the
+   current day as the breakout trigger, matching the live "in a dip, then a
+   strong breakout bar" logic — just at daily resolution. Exits use the same
+   volatility-scaled brackets; a 15-bar time-stop closes anything that never
+   reaches a level (result by sign). One open trade per ticker at a time.
+   Trades are tagged bt:1 so the UI can tell seeded from live trades. */
+export function backtestDaily(q, sym, { maxHold = 15, capPerSym = 10 } = {}) {
+  const c = q?.c, h = q?.h, l = q?.l, t = q?.t;
+  if (!c || c.length < 60) return [];
+  const trades = [];
+  let open = null;
+  for (let i = 24; i < c.length; i++) {
+    if (open) {
+      let done = null;
+      if (l[i] <= open.sl) done = { exit: open.sl, result: "loss" };          // stop wins ties
+      else if (h[i] >= open.tp) done = { exit: open.tp, result: "win" };
+      else if (i - open.idx >= maxHold) done = { exit: c[i], result: c[i] >= open.entry ? "win" : "loss" };
+      if (done) {
+        trades.push({
+          sym, bt: 1, entry: open.entry, tp: open.tp, sl: open.sl, vol20: open.vol20,
+          firedAt: open.firedAt, closedAt: t[i] * 1000, exit: r4(done.exit),
+          result: done.result, pct: r4((done.exit / open.entry - 1) * 100),
+        });
+        open = null;
+      }
+      continue;                                                                 // no same-day re-entry
+    }
+    // dip context as of the prior close
+    const prevSlice = c.slice(i - 20, i);
+    if (prevSlice.length < 20) continue;
+    const rets = [];
+    for (let k = i - 19; k < i; k++) rets.push((c[k] / c[k - 1] - 1) * 100);
+    const vol20 = Math.max(stdev(rets) ?? 1, 0.35);
+    const high20 = Math.max(...prevSlice);
+    const d = -((c[i - 1] / high20 - 1) * 100) / vol20;
+    const range = Math.max(h[i] - l[i], 1e-9);
+    const rsiNow = rsi14(c.slice(0, i + 1)), rsiPrev = rsi14(c.slice(0, i - 1));
+    if (d >= ENGINE.zoneDepth && c[i] > h[i - 1] &&
+        (c[i] - l[i]) / range >= ENGINE.strongBarPos &&
+        rsiNow != null && rsiPrev != null && rsiNow > rsiPrev) {
+      const entry = r4(c[i]);
+      const { tp, sl } = bracketFor(entry, vol20);
+      open = { entry, tp, sl, vol20: r4(vol20), idx: i, firedAt: t[i] * 1000 };
+    }
+  }
+  return trades.slice(-capPerSym);
+}
