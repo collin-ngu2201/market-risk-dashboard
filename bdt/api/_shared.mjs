@@ -37,7 +37,10 @@ export async function readBlobJson(prefix) {
   if (!token) return null;
   const { blobs } = await list({ prefix, limit: 1, token });
   if (!blobs.length) return null;
-  const r = await fetch(blobs[0].url, {
+  // cache-bust: the blob CDN honors cacheControlMaxAge (min 60s), so a bare
+  // URL can serve a copy up to 60s stale right after a write
+  const sep = blobs[0].url.includes("?") ? "&" : "?";
+  const r = await fetch(blobs[0].url + sep + "ts=" + Date.now(), {
     headers: { authorization: "Bearer " + token }, cache: "no-store",
   });
   if (!r.ok) return null;
