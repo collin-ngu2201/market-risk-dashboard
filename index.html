@@ -107,7 +107,8 @@
     <a href="https://us-premarket-scanner.netlify.app" target="_blank" rel="noopener" style="font-size:13px;color:var(--cyan);text-decoration:none;margin-left:12px">🚀 Scanner</a>
     <a href="https://us-premarket-scanner.netlify.app/divergence.html" target="_blank" rel="noopener" style="font-size:13px;color:var(--cyan);text-decoration:none;margin-left:10px">🔀 Divergence</a>
     <a href="https://us-premarket-scanner.netlify.app/options.html" target="_blank" rel="noopener" style="font-size:13px;color:var(--cyan);text-decoration:none;margin-left:10px">📈 Options</a>
-    <a href="https://us-premarket-scanner.netlify.app/levels.html" target="_blank" rel="noopener" style="font-size:13px;color:var(--cyan);text-decoration:none;margin-left:10px">🎯 Levels</a></div>
+    <a href="https://us-premarket-scanner.netlify.app/levels.html" target="_blank" rel="noopener" style="font-size:13px;color:var(--cyan);text-decoration:none;margin-left:10px">🎯 Levels</a>
+    <a href="/bdt/" style="font-size:13px;color:var(--cyan);text-decoration:none;margin-left:10px">🌌 Dip Radar</a></div>
   <div class="hdr-right">
     <span id="mktStatus" class="pill closed">—</span>
     <span>Updated: <b id="lastUpd" style="color:var(--txt)">—</b></span>
@@ -296,9 +297,9 @@ async function detectFunctions(){
   }catch(e){}
   const m=$('#modeNote');
   if(m) m.textContent=FN_MODE
-    ? '⚡ Serverless mode — data proxied via this site’s own Netlify Functions'
+    ? '⚡ Serverless mode — data proxied via this site’s own serverless functions'
       +(FN_KEYS.finnhub?' · Finnhub fallback armed':'')+(FN_KEYS.twelvedata?' · Twelve Data fallback armed':'')
-    : '🌐 Browser mode — using public CORS proxies (deploy to Netlify for the reliable path)';
+    : '🌐 Browser mode — using public CORS proxies (deploy to Vercel or Netlify for the reliable path)';
 }
 async function yahooChart(sym){
   if(FN_MODE){
