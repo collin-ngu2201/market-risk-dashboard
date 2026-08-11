@@ -1,6 +1,6 @@
 # US Market Risk Dashboard
 
-**Live:** deployed on Vercel · auto-deploys from `main`
+**Live:** https://market-risk-dashboard-2201.vercel.app · auto-deploys from `main`
 
 Single-page market risk dashboard: composite **Risk-On / Risk-Off** gauge built from
 the three major US indexes, VIX, BTC Fear & Greed, the full Treasury yield curve,
