@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "name": "market-risk-dashboard",
+  "engines": {
+    "node": "20.x"
+  }
+}

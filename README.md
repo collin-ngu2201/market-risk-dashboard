@@ -1,6 +1,6 @@
 # US Market Risk Dashboard
 
-**Live:** https://market-risk-dashboard.netlify.app · auto-deploys from `main`
+**Live:** deployed on Vercel · auto-deploys from `main`
 
 Single-page market risk dashboard: composite **Risk-On / Risk-Off** gauge built from
 the three major US indexes, VIX, BTC Fear & Greed, the full Treasury yield curve,
@@ -17,20 +17,21 @@ and gold/silver. Auto-refreshes every 60 seconds.
 | BTC Fear & Greed | alternative.me (direct) | — |
 | BTC price | CoinGecko (direct) | — |
 
-When opened as a plain local file (no Netlify), the page detects that `/api/health`
-is absent and falls back to public CORS proxies — it still works, just less reliably.
+When opened as a plain local file (no serverless backend), the page detects that
+`/api/health` is absent and falls back to public CORS proxies — it still works,
+just less reliably.
 
-## Deploy (Netlify + GitHub)
+## Deploy (Vercel + GitHub)
 
 1. Push this repo to GitHub.
-2. In Netlify: **Add new site → Import an existing project → GitHub** → pick this repo.
-   No build command needed; publish directory is the repo root (set in `netlify.toml`).
-3. In **Site configuration → Environment variables**, add:
+2. In Vercel: **Add New → Project → Import** this repo. Framework preset **Other**,
+   no build command; the `api/` functions and static files deploy as-is.
+3. In **Project Settings → Environment Variables**, add:
    - `FINNHUB_KEY` — your Finnhub API key
    - `TWELVEDATA_KEY` — your Twelve Data API key
-4. Redeploy. The footer should read "⚡ Serverless mode".
+4. Deploy. The footer should read "⚡ Serverless mode".
 
-Keys are only read server-side inside the functions in `netlify/functions/` —
+Keys are only read server-side inside the functions in `api/` —
 they are never committed to the repo and never sent to the browser.
 
 > Informational only — not financial advice.

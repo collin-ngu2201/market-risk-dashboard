@@ -285,9 +285,9 @@ async function getText(url,{proxy=false,timeout=12000}={}){
 }
 const getJSON = async (url,opt)=> JSON.parse(await getText(url,opt));
 
-/* ---- serverless mode: when deployed on Netlify, /api/* functions proxy the
+/* ---- serverless mode: when deployed on Vercel, /api/* functions proxy the
    sources server-side (no public CORS proxy needed) and unlock keyed fallbacks
-   (Finnhub ETF quotes, Twelve Data gold spot). Keys live in Netlify env vars. */
+   (Finnhub ETF quotes, Twelve Data gold spot). Keys live in Vercel env vars. */
 let FN_MODE=false, FN_KEYS={finnhub:false,twelvedata:false};
 async function detectFunctions(){
   try{
@@ -296,9 +296,9 @@ async function detectFunctions(){
   }catch(e){}
   const m=$('#modeNote');
   if(m) m.textContent=FN_MODE
-    ? '⚡ Serverless mode — data proxied via this site’s own Netlify Functions'
+    ? '⚡ Serverless mode — data proxied via this site’s own Vercel Functions'
       +(FN_KEYS.finnhub?' · Finnhub fallback armed':'')+(FN_KEYS.twelvedata?' · Twelve Data fallback armed':'')
-    : '🌐 Browser mode — using public CORS proxies (deploy to Netlify for the reliable path)';
+    : '🌐 Browser mode — using public CORS proxies (deploy to Vercel for the reliable path)';
 }
 async function yahooChart(sym){
   if(FN_MODE){
