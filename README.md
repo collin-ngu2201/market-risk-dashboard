@@ -40,6 +40,12 @@ blending depth, RSI(14) and 5-day pullback.
 - `/api/backtest` seeds win-rate history (`?reset=1&since=YYYY-MM-DD` to re-seed a window).
 - The standalone Vercel project for Dip Radar uses `bdt/` as its Root Directory
   (`bdt/api/` + `bdt/package.json`); the copies under root `api/` serve the same app from this site.
+- **Where the signal engine actually runs:** only the standalone `dip-radar` project
+  (https://dip-radar-zeta.vercel.app) has a Blob store connected, so open trades, alerts and the
+  Performance page only work there. The hub's header links to it. This site's own `/bdt/` copy has
+  no Blob store: the Command Center and Watchlist still score dips, but `/api/scan`, `/api/backtest`
+  return 503 and Setups / Alerts / Performance show "storage is not connected". The `dip-radar`
+  project has Vercel SSO on, so you must be signed in to Vercel to open it.
 
 ## Deploy (Vercel + GitHub)
 
