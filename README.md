@@ -1,6 +1,6 @@
 # US Market Risk Dashboard
 
-**Live:** https://market-risk-dashboard.netlify.app · auto-deploys from `main`
+**Live:** https://market-risk-dashboard-2201.vercel.app · auto-deploys from `main`
 
 Single-page market risk dashboard: composite **Risk-On / Risk-Off** gauge built from
 the three major US indexes, VIX, BTC Fear & Greed, the full Treasury yield curve,
@@ -17,8 +17,9 @@ and gold/silver. Auto-refreshes every 60 seconds.
 | BTC Fear & Greed | alternative.me (direct) | — |
 | BTC price | CoinGecko (direct) | — |
 
-When opened as a plain local file (no Netlify), the page detects that `/api/health`
-is absent and falls back to public CORS proxies — it still works, just less reliably.
+When opened as a plain local file (no serverless backend), the page detects that
+`/api/health` is absent and falls back to public CORS proxies — it still works,
+just less reliably.
 
 ## Dip Radar (`/bdt/`)
 
@@ -29,34 +30,28 @@ units of each ticker's own 20-day daily volatility), mapped to a 5-state ladder
 (NO DIP → EASING → DIPPING → DIP ZONE → DEEP DIP) plus a 0–100 snapback-readiness score
 blending depth, RSI(14) and 5-day pullback.
 
-- `/bdt/` — Command Center: stat tiles, 12-sector radar, top snapback candidates
+- `/bdt/` — Command Center: stat tiles, sector radar, top snapback candidates
 - `/bdt/watchlist.html` — full universe, filter tabs, symbol search
-- Data: `/api/bdt` batch function (Yahoo chart API server-side, allowlisted symbols,
-  4 requests per scan); falls back to public CORS proxies when opened without Netlify.
-- Phase 2 (planned): scheduled scanner + Netlify Blobs for fired signals with
-  entry/target/stop tracking, alerts feed, earned T1–T5 tiers and win-rate stats.
+- `/bdt/setups.html`, `/bdt/alerts.html` — live signal trades and the alerts feed
+- `/bdt/performance.html` — win rate, expectancy, profit factor, equity curve, per-ticker table
+- Signal engine (`api/scan.mjs`): fires a BUY when IN ZONE + BREAKOUT + UPTURN + STRONG BAR
+  all hold on a completed 30-min bar, with volatility-scaled target/stop and earned T1–T5 tiers.
+  State (open trades, closed log, alerts) lives in a private Vercel Blob store.
+- `/api/backtest` seeds win-rate history (`?reset=1&since=YYYY-MM-DD` to re-seed a window).
+- The standalone Vercel project for Dip Radar uses `bdt/` as its Root Directory
+  (`bdt/api/` + `bdt/package.json`); the copies under root `api/` serve the same app from this site.
 
 ## Deploy (Vercel + GitHub)
 
-The `api/` directory holds the canonical serverless functions (Vercel Web-handler
-signature, file-based routing: `api/bdt.mjs` → `/api/bdt`). Import the repo at
-vercel.com/new (framework preset: Other, no build command) or deploy via CLI with
-`vercel --prod`. Set `FINNHUB_KEY` and `TWELVEDATA_KEY` in the project's
-Environment Variables to arm the keyed fallbacks — everything else works without keys.
-
-## Deploy (Netlify + GitHub) — legacy
-
-`netlify/functions/` mirrors the same functions for the original Netlify setup.
-
 1. Push this repo to GitHub.
-2. In Netlify: **Add new site → Import an existing project → GitHub** → pick this repo.
-   No build command needed; publish directory is the repo root (set in `netlify.toml`).
-3. In **Site configuration → Environment variables**, add:
+2. In Vercel: **Add New → Project → Import** this repo. Framework preset **Other**,
+   no build command; the `api/` functions and static files deploy as-is.
+3. In **Project Settings → Environment Variables**, add:
    - `FINNHUB_KEY` — your Finnhub API key
    - `TWELVEDATA_KEY` — your Twelve Data API key
-4. Redeploy. The footer should read "⚡ Serverless mode".
+4. Deploy. The footer should read "⚡ Serverless mode".
 
-Keys are only read server-side inside the functions in `netlify/functions/` —
+Keys are only read server-side inside the functions in `api/` —
 they are never committed to the repo and never sent to the browser.
 
 > Informational only — not financial advice.

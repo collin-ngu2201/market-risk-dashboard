@@ -1,22 +1,18 @@
-// Vercel serverless function (Web handler). Canonical copy going forward;
-// netlify/functions/ holds the legacy Netlify twin.
 // Finnhub real-time quote fallback (free tier covers US stocks/ETFs).
 // Key stays server-side in the FINNHUB_KEY environment variable.
 const ALLOWED = new Set(["SPY", "QQQ", "DIA", "GLD", "SLV"]);
 
-export const GET = async (req) => {
+export default async function handler(req, res) {
   const key = process.env.FINNHUB_KEY;
-  if (!key) return Response.json({ error: "FINNHUB_KEY not configured" }, { status: 503 });
-  const symbol = new URL(req.url, "http://localhost").searchParams.get("symbol") || "";
-  if (!ALLOWED.has(symbol))
-    return Response.json({ error: "symbol not allowed" }, { status: 400 });
+  if (!key) { res.status(503).json({ error: "FINNHUB_KEY not configured" }); return; }
+  const symbol = String(req.query?.symbol || "");
+  if (!ALLOWED.has(symbol)) { res.status(400).json({ error: "symbol not allowed" }); return; }
 
   const r = await fetch(
     `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${key}`
   );
-  if (!r.ok) return Response.json({ error: "upstream " + r.status }, { status: 502 });
-  return new Response(await r.text(), {
-    headers: { "content-type": "application/json", "cache-control": "public, max-age=15" },
-  });
-};
-
+  if (!r.ok) { res.status(502).json({ error: "upstream " + r.status }); return; }
+  res.setHeader("content-type", "application/json");
+  res.setHeader("cache-control", "public, max-age=15");
+  res.status(200).send(await r.text());
+}

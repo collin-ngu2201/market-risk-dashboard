@@ -1,5 +1,3 @@
-// Vercel serverless function (Web handler). Canonical copy going forward;
-// netlify/functions/ holds the legacy Netlify twin.
 // Server-side proxy for Yahoo Finance v8 chart API (no CORS in browsers).
 // Allowlisted symbols only, so this can't be abused as an open proxy.
 const ALLOWED = new Set([
@@ -11,13 +9,11 @@ const ALLOWED = new Set([
 const RANGES = new Set(["1d", "5d", "1mo", "3mo", "6mo", "1y"]);
 const INTERVALS = new Set(["5m", "15m", "1h", "1d", "1wk"]);
 
-export const GET = async (req) => {
-  const u = new URL(req.url, "http://localhost");
-  const symbol = u.searchParams.get("symbol") || "";
-  if (!ALLOWED.has(symbol))
-    return Response.json({ error: "symbol not allowed" }, { status: 400 });
-  const range = RANGES.has(u.searchParams.get("range")) ? u.searchParams.get("range") : "3mo";
-  const interval = INTERVALS.has(u.searchParams.get("interval")) ? u.searchParams.get("interval") : "1d";
+export default async function handler(req, res) {
+  const symbol = String(req.query?.symbol || "");
+  if (!ALLOWED.has(symbol)) { res.status(400).json({ error: "symbol not allowed" }); return; }
+  const range = RANGES.has(req.query?.range) ? req.query.range : "3mo";
+  const interval = INTERVALS.has(req.query?.interval) ? req.query.interval : "1d";
 
   const upstream =
     `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}` +
@@ -25,13 +21,8 @@ export const GET = async (req) => {
   const r = await fetch(upstream, {
     headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
   });
-  if (!r.ok)
-    return Response.json({ error: "upstream " + r.status }, { status: 502 });
-  return new Response(await r.text(), {
-    headers: {
-      "content-type": "application/json",
-      "cache-control": "public, max-age=30",
-    },
-  });
-};
-
+  if (!r.ok) { res.status(502).json({ error: "upstream " + r.status }); return; }
+  res.setHeader("content-type", "application/json");
+  res.setHeader("cache-control", "public, max-age=30");
+  res.status(200).send(await r.text());
+}
