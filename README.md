@@ -42,7 +42,8 @@ blending depth, RSI(14) and 5-day pullback.
   (`bdt/api/` + `bdt/package.json`); the copies under root `api/` serve the same app from this site.
 - **Where the signal engine actually runs:** only the standalone `dip-radar` project
   (https://dip-radar-zeta.vercel.app) has a Blob store connected, so open trades, alerts and the
-  Performance page only work there. The hub's header links to it. This site's own `/bdt/` copy has
+  Performance page only work there. The hub no longer links to it (open that URL directly). This
+  site's own `/bdt/` copy, still reachable by URL but not linked from the hub, has
   no Blob store: the Command Center and Watchlist still score dips, but `/api/scan`, `/api/backtest`
   return 503 and Setups / Alerts / Performance show "storage is not connected". The `dip-radar`
   project has Vercel SSO on, so you must be signed in to Vercel to open it.
