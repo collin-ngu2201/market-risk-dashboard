@@ -21,6 +21,26 @@ When opened as a plain local file (no serverless backend), the page detects that
 `/api/health` is absent and falls back to public CORS proxies — it still works,
 just less reliably.
 
+## Dip Radar (`/bdt/`)
+
+A second app in this repo, inspired by the Big Dipper Trades command center (independent,
+not affiliated): a dip-and-snapback scanner over a ~66-ticker universe of large caps and
+sector ETFs. Dip depth is volatility-normalized (distance below the 20-day closing high in
+units of each ticker's own 20-day daily volatility), mapped to a 5-state ladder
+(NO DIP → EASING → DIPPING → DIP ZONE → DEEP DIP) plus a 0–100 snapback-readiness score
+blending depth, RSI(14) and 5-day pullback.
+
+- `/bdt/` — Command Center: stat tiles, sector radar, top snapback candidates
+- `/bdt/watchlist.html` — full universe, filter tabs, symbol search
+- `/bdt/setups.html`, `/bdt/alerts.html` — live signal trades and the alerts feed
+- `/bdt/performance.html` — win rate, expectancy, profit factor, equity curve, per-ticker table
+- Signal engine (`api/scan.mjs`): fires a BUY when IN ZONE + BREAKOUT + UPTURN + STRONG BAR
+  all hold on a completed 30-min bar, with volatility-scaled target/stop and earned T1–T5 tiers.
+  State (open trades, closed log, alerts) lives in a private Vercel Blob store.
+- `/api/backtest` seeds win-rate history (`?reset=1&since=YYYY-MM-DD` to re-seed a window).
+- The standalone Vercel project for Dip Radar uses `bdt/` as its Root Directory
+  (`bdt/api/` + `bdt/package.json`); the copies under root `api/` serve the same app from this site.
+
 ## Deploy (Vercel + GitHub)
 
 1. Push this repo to GitHub.

@@ -1,10 +1,7 @@
 {
-  "name": "market-risk-dashboard",
+  "name": "dip-radar",
   "private": true,
   "type": "module",
-  "engines": {
-    "node": "24.x"
-  },
   "dependencies": {
     "@vercel/blob": "latest"
   }

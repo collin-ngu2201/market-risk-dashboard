@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#050810">
+<title>Dip Radar — Setups</title>
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
+<link rel="stylesheet" href="bdt.css">
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="layout">
+
+  <aside class="side">
+    <div class="logo">Dip<br>Radar <small>SNAPBACK SCANNER</small></div>
+    <nav class="nav">
+      <a href="index.html">▦ Dashboard</a>
+      <a href="watchlist.html">≡ Watchlist</a>
+      <a href="setups.html" class="active">◎ Setups</a>
+      <a href="alerts.html">✧ Alerts</a>
+      <a href="performance.html">∿ Performance</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="sysbox">
+      SYS.STATUS: <b id="sysMkt" class="ok">—</b><br>
+      LAST_SCAN: <b id="sysLast">—</b> <span id="scanDot" class="dot"></span><br>
+      NEXT_SCAN: <b id="sysNext">—</b><br>
+      QUOTES: ~15 MIN DELAYED
+    </div>
+    <div class="backlink"><a href="https://market-risk-dashboard-gilt.vercel.app">← US Market Risk Dashboard</a></div>
+  </aside>
+
+  <main class="main">
+    <div class="pagehead">
+      <div class="crumb">Dip Radar</div>
+      <h1>Setups</h1>
+      <div class="sub" id="suCount">—</div>
+      <div class="hdr-actions">
+        <button id="btnRefresh">⟳ Rescan</button>
+      </div>
+      <div class="err-note" id="errNote"></div>
+    </div>
+
+    <div class="wl-controls">
+      <div class="wl-tabs">
+        <button data-f="best">★ BEST PICKS</button>
+        <button data-f="active">ALL ACTIVE <span class="n" id="nActive">—</span></button>
+        <button data-f="won">WON <span class="n" id="nWon">—</span></button>
+        <button data-f="lost">LOST <span class="n" id="nLost">—</span></button>
+        <button data-f="log">FULL LOG</button>
+      </div>
+    </div>
+
+    <div class="tabnote" id="suNote"><b>★ BEST PICKS</b> — live setups making the most progress toward
+      target right now. Near-stop signals are excluded. Switch to ALL ACTIVE to see everything.</div>
+
+    <div class="trades" id="suList"><div class="note">Loading…</div></div>
+  </main>
+</div>
+
+<footer class="disclaimer">
+  Signals fire when all four engine conditions confirm on a completed 30-minute bar: IN ZONE (dip depth
+  ≥ 1.75× the ticker's own 20-day volatility below its 20-day high), BREAKOUT (close above the prior bar's
+  high), UPTURN (30-min RSI rising) and STRONG BAR (close in the upper 60% of the bar's range). Targets and
+  stops are volatility-scaled (~3× / ~7.5× daily vol, clamped); if a bar spans both, the stop wins. Long only,
+  one open trade per ticker. Quotes ~15 min delayed. These are algorithmic markers for study — not financial advice.
+</footer>
+<script src="bdt.js"></script>
+</body>
+</html>

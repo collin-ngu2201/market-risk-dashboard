@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#050810">
+<title>Dip Radar — Alerts</title>
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
+<link rel="stylesheet" href="bdt.css">
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="layout">
+
+  <aside class="side">
+    <div class="logo">Dip<br>Radar <small>SNAPBACK SCANNER</small></div>
+    <nav class="nav">
+      <a href="index.html">▦ Dashboard</a>
+      <a href="watchlist.html">≡ Watchlist</a>
+      <a href="setups.html">◎ Setups</a>
+      <a href="alerts.html" class="active">✧ Alerts</a>
+      <a href="performance.html">∿ Performance</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="sysbox">
+      SYS.STATUS: <b id="sysMkt" class="ok">—</b><br>
+      LAST_SCAN: <b id="sysLast">—</b> <span id="scanDot" class="dot"></span><br>
+      NEXT_SCAN: <b id="sysNext">—</b><br>
+      QUOTES: ~15 MIN DELAYED
+    </div>
+    <div class="backlink"><a href="https://market-risk-dashboard-gilt.vercel.app">← US Market Risk Dashboard</a></div>
+  </aside>
+
+  <main class="main">
+    <div class="pagehead">
+      <div class="crumb">Dip Radar</div>
+      <h1>Alerts</h1>
+      <div class="sub">New setups firing, take-profit hits and stop-outs — the feed persists so you never miss one. Newest first.</div>
+      <div class="hdr-actions">
+        <button id="btnRefresh">⟳ Rescan</button>
+      </div>
+      <div class="err-note" id="errNote"></div>
+    </div>
+
+    <div class="alerts" id="alList"><div class="note">Loading…</div></div>
+  </main>
+</div>
+
+<footer class="disclaimer">
+  The engine records an alert when a setup fires (all 4 conditions confirmed), when a target is hit and when a
+  stop closes a trade. The most recent 200 events are kept. Quotes ~15 min delayed. Not financial advice.
+</footer>
+<script src="bdt.js"></script>
+</body>
+</html>
